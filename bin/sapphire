@@ -1,0 +1,43 @@
+#!/usr/bin/env ruby
+require 'optparse'
+require 'sapphire'
+
+Version = Sapphire::VERSION
+
+opt = OptionParser.new <<EOS
+Sapphire is a ruby to perl compiler.
+Usage: sapphire [options]
+EOS
+OPTS = {:prettify => true}
+opt.on('-o FILENAME', 'specify the filename for output') {|v| OPTS[:output] = v}
+opt.on('-p [YES|no]', 'specify whether prettify the output or not') {|v| OPTS[:prettify] = v.to_s.downcase != 'no'}
+opt.on('-t [PERL|s]', 'specify the output filetype') {|v| OPTS[:ruby_parse] = v}
+opt.parse! ARGV
+
+if OPTS[:ruby_parse] == 's'
+  puts `ruby_parse #{ARGF.filename}`
+else
+  perl = Sapphire.convert_file(ARGF)
+
+  if OPTS[:prettify] && `which perltidy`.empty?
+    OPTS[:prettify] = false
+    STDERR.puts "# Please install perltidy to prettify the generated code: `sudo cpan -i Perl::Tidy'"
+  end
+
+  if OPTS[:prettify]
+    require 'tempfile'
+    Tempfile.open 'sapphire' do |tmp|
+      tmp.write perl
+      tmp.flush
+      perl = `perltidy -st #{tmp.path}`
+    end
+  end
+
+  if OPTS[:output]
+    File.open(OPTS[:output], 'w') do |file|
+      file.puts perl
+    end
+  else
+    puts perl
+  end
+end
