@@ -19,7 +19,6 @@ class Foo
 end
 
 adam = Foo.new
-adam = Foo.new
-adam.name = 'Adam Beynon'
+adam.name = 'Ando Yasushi'
 adam.bar
 puts adam.name

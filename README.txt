@@ -54,7 +54,9 @@ Sapphire is a ruby to perl compiler. I'm developing this just for fun.
 
 == REQUIREMENTS:
 
-* https://github.com/seattlerb/ruby_parser
+* ruby_parser
+* Perl::Tidy
+* Class::Accessor::Fast (to execute a generated perl code)
 
 == INSTALL:
 

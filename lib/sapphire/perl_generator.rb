@@ -17,7 +17,8 @@ module Sapphire
       when Node::ArrayNode
         "(#{obj.arguments.map {|a| obj_to_perl a}.join(', ')})"
       when Node::LitNode
-        obj.value.inspect
+        #obj.value.inspect
+        obj_to_perl obj.value
       when Node::LasgnNode
         lasgn_node_to_perl obj
       when Node::DefnNode
@@ -50,6 +51,8 @@ module Sapphire
         if_node_to_perl obj
       when Node::AndNode
         "#{obj_to_perl obj.left} and #{obj_to_perl obj.right}"
+      when Node::OrNode
+        "#{obj_to_perl obj.left} or #{obj_to_perl obj.right}"
       when Node::HashNode
         hash_node_to_perl obj
       when Node::Match3Node
@@ -58,8 +61,17 @@ module Sapphire
         obj.gvar_name.to_s
       when Node::NotNode
         "not #{obj_to_perl obj.first}"
+      when Node::CdeclNode
+        cdecl_node_to_perl obj
+      when Node::MasgnNode
+        masgn_node_to_perl obj
       when Node::Base
         obj.arguments.map {|a| obj_to_perl a}.join("\n")
+
+      when String
+        obj.inspect
+      when Regexp
+        "qr#{obj.inspect}"
       else
         obj.to_s
       end
@@ -134,9 +146,13 @@ module Sapphire
         break if klass.is_a? Node::ClassNode
       end
       tmp_args.unshift('self') if klass
-      asgn_args = tmp_args.empty? ? 
-        '' : 
-        "\nmy (#{tmp_args.map{|s| "$#{s}"}.join(', ')}) = @_;"
+      asgn_args = tmp_args.map do |arg|
+        if arg.to_s =~ /^\*(.*)/
+          "my @#{$1} = @_;"
+        else
+          "my $#{arg} = shift;"
+        end
+      end.join "\n"
 
       <<-EOS.gsub(/^ +/, '')
         sub #{obj.method_name} {#{asgn_args}
@@ -148,7 +164,7 @@ module Sapphire
     def class_node_to_perl(obj)
       fqcn = 
         if obj.class_name.is_a? Node::Colon3Node
-          obj_to_node obj.class_name
+          obj_to_perl obj.class_name
         elsif obj.class_name =~ /^::(.+)/
           $1
         else
@@ -158,7 +174,7 @@ module Sapphire
         if obj.super_class.nil?
           'Class::Accessor::Fast'
         elsif obj.super_class.is_a? Node::Colon3Node
-          obj_to_node obj.super_class
+          obj_to_perl obj.super_class
         elsif obj.super_class =~ /^::(.+)/
           $1
         else
@@ -206,6 +222,15 @@ module Sapphire
           "#{obj_to_perl k} => #{obj_to_perl v}"
         end.join ', '
       }}"
+    end
+
+    def cdecl_node_to_perl(obj)
+      sigil = obj.value.is_a?(Node::ArrayNode) ? '@' : '$'
+      "use constant #{sigil}#{obj_to_perl obj.const_name} => #{obj_to_perl obj.value};"
+    end
+
+    def masgn_node_to_perl(obj)
+      # TODO
     end
   end
 end

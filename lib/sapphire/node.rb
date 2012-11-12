@@ -46,7 +46,7 @@ module Sapphire
     end
 
     class ScopedBase < Base
-      def setup_scope(scope)
+      def setup_scope(scope=Scope.new)
         super scope.create_child
       end
     end
@@ -90,9 +90,10 @@ module Sapphire
         body
       end
 
-      def setup_scope(scope)
+      def setup_scope(scope=Scope.new)
         super
         @scope.define_method method_name
+        self
       end
     end
 
@@ -133,11 +134,19 @@ module Sapphire
     end
 
     class ModuleNode < ScopedBase
-      args_reader :module_name, :body
+      #args_reader :module_name, :body
+      args_reader :module_name
 
-      def setup_scope(scope)
+      def setup_scope(scope=Scope.new)
         super
         @scope.module = self.module_name
+        self
+      end
+
+      def body # TODO
+        body = BlockNode.new *@arguments[1..-1]
+        body.parent = self
+        body
       end
     end
 
@@ -165,6 +174,10 @@ module Sapphire
       args_reader :left, :right
     end
 
+    class OrNode < Base
+      args_reader :left, :right
+    end
+
     class HashNode < Base
     end
 
@@ -177,6 +190,24 @@ module Sapphire
     end
 
     class NotNode < Base
+    end
+
+    class CdeclNode < Base
+      args_reader :const_name, :value
+
+      def setup_scope(scope=Scope.new)
+        super
+        @scope.define_constant const_name
+        self
+      end
+    end
+
+    class MasgnNode < Base
+      args_reader :lasgns, :values
+    end
+
+    class SplatNode < Base
+      args_reader :value
     end
   end
 end
