@@ -15,7 +15,7 @@ opt.on('-t [PERL|s]', 'specify the output filetype') {|v| OPTS[:ruby_parse] = v}
 opt.parse! ARGV
 
 if OPTS[:ruby_parse] == 's'
-  puts `ruby_parse #{ARGF.filename}`
+  Sapphire.convert_file(ARGF, 's')
 else
   type = OPTS[:ruby_parse] 
   type = nil if type and ['p', 'pl', 'perl'].include? type.downcase
