@@ -11,8 +11,8 @@ module Sapphire
       else
         require type
         class_name = "::#{type.split('/').map{|e| e.capitalize.gsub(/_([a-z])/){$1.upcase}}.join '::'}"
-        generator = eval(class_name).new(Parser.new.parse string)
-        generator.generate
+        generator = eval(class_name).new
+        generator.generate string
       end
     end
 

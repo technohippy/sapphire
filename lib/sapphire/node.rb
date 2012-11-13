@@ -32,10 +32,10 @@ module Sapphire
         nil
       end
 
-      def setup_scope(scope=Scope.new)
+      def setup(scope=Scope.new)
         @scope = scope
         @arguments.each do |arg|
-          arg.setup_scope scope if arg.is_a? Base
+          arg.setup scope if arg.is_a? Base
         end
         self
       end
@@ -46,7 +46,7 @@ module Sapphire
     end
 
     class ScopedBase < Base
-      def setup_scope(scope=Scope.new)
+      def setup(scope=Scope.new)
         super scope.create_child
       end
     end
@@ -90,7 +90,7 @@ module Sapphire
         body
       end
 
-      def setup_scope(scope=Scope.new)
+      def setup(scope=Scope.new)
         super
         @scope.define_method method_name
         self
@@ -137,7 +137,7 @@ module Sapphire
       #args_reader :module_name, :body
       args_reader :module_name
 
-      def setup_scope(scope=Scope.new)
+      def setup(scope=Scope.new)
         super
         @scope.module = self.module_name
         self
@@ -195,9 +195,9 @@ module Sapphire
     class CdeclNode < Base
       args_reader :const_name, :value
 
-      def setup_scope(scope=Scope.new)
+      def setup(scope=Scope.new)
         super
-        @scope.define_constant const_name
+        @scope.define_constant const_name, self.value.is_a?(ArrayNode) ? :array : :ref
         self
       end
     end

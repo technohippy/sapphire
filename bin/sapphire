@@ -12,6 +12,7 @@ OPTS = {:prettify => true}
 opt.on('-o FILENAME', 'specify the filename for output') {|v| OPTS[:output] = v}
 opt.on('-p [YES|no]', 'specify whether prettify the output or not') {|v| OPTS[:prettify] = v.to_s.downcase != 'no'}
 opt.on('-t [PERL|s]', 'specify the output filetype') {|v| OPTS[:ruby_parse] = v}
+opt.on('-e COMMAND', 'one line of script') {|v| (OPTS[:command] ||= []) << v}
 opt.parse! ARGV
 
 if OPTS[:ruby_parse] == 's'
@@ -19,7 +20,7 @@ if OPTS[:ruby_parse] == 's'
 else
   type = OPTS[:ruby_parse] 
   type = nil if type and ['p', 'pl', 'perl'].include? type.downcase
-  perl = Sapphire.convert_file(ARGF, type)
+  perl = OPTS[:command] ? Sapphire.convert_string(OPTS[:command].join("\n"), type) : Sapphire.convert_file(ARGF, type)
 
   if OPTS[:prettify] && `which perltidy`.empty?
     OPTS[:prettify] = false
