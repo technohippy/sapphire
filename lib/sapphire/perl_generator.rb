@@ -36,7 +36,7 @@ module Sapphire
       when Node::StrNode
         obj.value.inspect
       when Node::LvarNode
-        "$#{obj.var_name}"
+        lvar_node_to_perl obj
       when Node::NilNode
         "nil"
       when Node::ModuleNode
@@ -106,7 +106,12 @@ module Sapphire
         "__PACKAGE__->mk_accessors(qw(#{call_node.arglist.arguments.map{|lit| 
           lit.value.to_s}.join(' ')}))#{semicolon}"
       elsif call_node.method_name == :[]
-        "#{obj_to_perl call_node.receiver}->{#{obj_to_perl call_node.arglist.first}}#{semicolon}"
+        receiver = obj_to_perl call_node.receiver
+        if receiver =~ /^@(.*)/
+          "$#{$1}[#{obj_to_perl call_node.arglist.first}]#{semicolon}"
+        else
+          "#{receiver}->{#{obj_to_perl call_node.arglist.first}}#{semicolon}"
+        end
       elsif call_node.receiver && call_node.method_name == :size
         "(scalar call_node.{#{obj_to_perl call_node.receiver}})#{semicolon}"
       elsif call_node.receiver && call_node.method_name == :empty?
@@ -163,8 +168,10 @@ module Sapphire
       tmp_args.unshift('self') if klass
       asgn_args = tmp_args.map do |arg|
         if arg.to_s =~ /^\*(.*)/
+          obj.scope.define_variable $1, :array
           "my @#{$1} = @_;"
         else
+          obj.scope.define_variable arg
           "my $#{arg} = shift;"
         end
       end.join "\n"
@@ -221,6 +228,15 @@ module Sapphire
       attr = obj.method_name.to_s.sub('=', '')
       val = obj_to_perl obj.arglist
       "$#{receiver}->#{attr}(#{val});"
+    end
+
+    def lvar_node_to_perl(obj)
+      var_def = obj.scope.variable_definition obj.var_name
+      if var_def && var_def.type == :array
+        "@#{obj.var_name}"
+      else
+        "$#{obj.var_name}"
+      end
     end
 
     def if_node_to_perl(obj)

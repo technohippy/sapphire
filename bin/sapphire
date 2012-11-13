@@ -16,7 +16,11 @@ opt.on('-e COMMAND', 'one line of script') {|v| (OPTS[:command] ||= []) << v}
 opt.parse! ARGV
 
 if OPTS[:ruby_parse] == 's'
-  Sapphire.convert_file(ARGF, 's')
+  if OPTS[:command]
+    Sapphire.convert_string(OPTS[:command].join("\n"), 's')
+  else
+    Sapphire.convert_file(ARGF, 's')
+  end
 else
   type = OPTS[:ruby_parse] 
   type = nil if type and ['p', 'pl', 'perl'].include? type.downcase
