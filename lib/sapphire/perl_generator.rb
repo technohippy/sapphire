@@ -3,7 +3,10 @@ require 'sapphire/node'
 
 module Sapphire
   class PerlGenerator < Generator
-    def initialize(prefix="use strict;\nuse warnings;\n", suffix="\n1;")
+    DEFAULT_PREFIX = "use strict;\nuse warnings;\n"
+    DEFAULT_SUFFIX = "\n1;"
+
+    def initialize(prefix=DEFAULT_PREFIX, suffix=DEFAULT_SUFFIX)
       super
     end
 
@@ -83,10 +86,14 @@ module Sapphire
       end
     end
 
-    def call_node_to_perl(call_node)
-      semicolon = call_node.parent.nil? || call_node.parent.is_a?(Node::BlockNode) || 
-        (call_node.parent.is_a?(Node::IterNode) && call_node.parent.parent.is_a?(Node::BlockNode)) ? 
+    def semicolon_if_needed(node)
+      node.parent.nil? || node.parent.is_a?(Node::BlockNode) || 
+        (node.parent.is_a?(Node::IterNode) && node.parent.parent.is_a?(Node::BlockNode)) ? 
           ';' : ''
+    end
+
+    def call_node_to_perl(call_node)
+      semicolon = semicolon_if_needed call_node
       if call_node.receiver && self.is_binary_operator(call_node.method_name)
         "#{obj_to_perl call_node.receiver} #{call_node.method_name} #{
           obj_to_perl call_node.arglist.first}#{semicolon}"
@@ -148,6 +155,9 @@ module Sapphire
 
         receiver = call_node.receiver ? "#{obj_to_perl call_node.receiver}->" : ''
         method = call_node.method_name.to_s
+        if method =~ /^(.*)[!?]$/
+          method = $1
+        end
         args = call_node.arglist.map {|a| obj_to_perl a}.join(', ')
         if block
           args += ', ' unless args.empty?
@@ -182,15 +192,16 @@ module Sapphire
     end
 
     def lasgn_node_to_perl(obj)
+      semicolon = semicolon_if_needed obj
       if obj.scope.variable_defined? obj.var_name
         var_def = obj.scope.variable_definition obj.var_name
         sigil = var_def.type == :array ? '@' : '$'
-        "#{sigil}#{obj.var_name} = #{obj_to_perl obj.value};"
+        "#{sigil}#{obj.var_name} = #{obj_to_perl obj.value}#{semicolon}"
       else
         type = obj.value.is_a?(Node::ArrayNode) ? :array : :ref 
         obj.scope.define_variable obj.var_name, type
         sigil = type == :array ? '@' : '$'
-        "my #{sigil}#{obj.var_name} = #{obj_to_perl obj.value};"
+        "my #{sigil}#{obj.var_name} = #{obj_to_perl obj.value}#{semicolon}"
       end
     end
 
