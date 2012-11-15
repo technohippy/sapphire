@@ -37,16 +37,12 @@ module Sapphire
         obj.value.inspect
       when Node::LvarNode
         lvar_node_to_perl obj
-      when Node::NilNode
-        "nil"
       when Node::ModuleNode
         obj_to_perl obj.body
       when Node::Colon2Node
         "#{obj_to_perl obj.head}::#{obj_to_perl obj.tail}"
       when Node::Colon3Node
         obj_to_perl obj.tail
-      when Node::SelfNode
-        '$self'
       when Node::ReturnNode
         "return #{obj_to_perl obj.value};"
       when Node::IfNode
@@ -69,6 +65,12 @@ module Sapphire
         masgn_node_to_perl obj
       when Node::BlockNode
         block_node_to_perl obj
+      when Node::WhileNode
+        while_node_to_perl obj
+      when Node::UntilNode
+        until_node_to_perl obj
+      when Node::KeywordBase
+        obj.keyword
 
       when Node::Base
         obj.arguments.map {|a| obj_to_perl a}.join("\n")
@@ -88,22 +90,14 @@ module Sapphire
       if call_node.receiver && self.is_binary_operator(call_node.method_name)
         "#{obj_to_perl call_node.receiver} #{call_node.method_name} #{
           obj_to_perl call_node.arglist.first}#{semicolon}"
-      elsif call_node.receiver && call_node.method_name == :each
-        var_name = call_node.next.arguments.first
-        my = call_node.scope.variable_defined?(var_name) ? '' : 'my '
-        <<-EOS.gsub(/^ +/, '')
-          for #{my}$#{var_name} #{obj_to_perl call_node.receiver} {
-            #{obj_to_perl call_node.next(2)}
-          }
-        EOS
       elsif call_node.receiver.nil? && call_node.method_name == :puts
-        %Q|print(#{obj_to_perl call_node.arglist} . "\\n")#{semicolon}|
+        %Q|print(#{obj_to_perl call_node.arglist.first} . "\\n")#{semicolon}|
       elsif call_node.receiver.nil? && call_node.method_name == :require
         mod = call_node.arglist.first.value.to_s
         mod = mod.split('/').map{|e| e.capitalize.gsub(/_([a-z])/){$1.upcase}}.join '::'
         "use #{mod}#{semicolon}"
       elsif call_node.receiver.nil? && call_node.method_name == :attr_accessor
-        "__PACKAGE__->mk_accessors(qw(#{call_node.arglist.arguments.map{|lit| 
+        "__PACKAGE__->mk_accessors(qw(#{call_node.arglist.map{|lit| 
           lit.value.to_s}.join(' ')}))#{semicolon}"
       elsif call_node.method_name == :[]
         receiver = obj_to_perl call_node.receiver
@@ -112,10 +106,12 @@ module Sapphire
         else
           "#{receiver}->{#{obj_to_perl call_node.arglist.first}}#{semicolon}"
         end
+      elsif call_node.method_name == :call # TODO: assume that the receiver is a block
+        "#{obj_to_perl call_node.receiver}->(#{call_node.arglist.map {|a| obj_to_perl a}.join(', ')})#{semicolon}"
       elsif call_node.receiver && call_node.method_name == :size
-        "(scalar call_node.{#{obj_to_perl call_node.receiver}})#{semicolon}"
+        "(scalar @{#{obj_to_perl call_node.receiver}})#{semicolon}"
       elsif call_node.receiver && call_node.method_name == :empty?
-        "(scalar call_node.{#{obj_to_perl call_node.receiver}} == 0)#{semicolon}"
+        "(scalar @{#{obj_to_perl call_node.receiver}} == 0)#{semicolon}"
       elsif call_node.receiver && call_node.method_name == :to_arrayref # TODO: remove this
         "[#{obj_to_perl call_node.receiver}]#{semicolon}"
       elsif call_node.method_name == :map
@@ -125,7 +121,7 @@ module Sapphire
           } #{obj_to_perl call_node.receiver}#{semicolon}
         EOS
       elsif call_node.receiver && [:find, :select].include?(call_node.method_name)
-        "(grep { #{obj_to_perl call_node.next(2)} } call_node.{#{obj_to_perl call_node.receiver}}) != 0#{semicolon}"
+        "(grep { #{obj_to_perl call_node.next(2)} } @{#{obj_to_perl call_node.receiver}}) != 0#{semicolon}"
       elsif call_node.method_name == :is_a?
         arg = obj_to_perl call_node.arglist.first
         if arg == 'Array'
@@ -134,15 +130,55 @@ module Sapphire
           "(ref #{obj_to_perl call_node.receiver} eq '#{arg}')#{semicolon}"
         end
       else
+        block = nil
+        block_args = nil
+        if call_node.parent.is_a?(Node::IterNode)
+          block = call_node.parent.body
+          block_args = call_node.next
+          if call_node.method_name == :each
+            var_name = block_args.arguments.first
+            my = call_node.scope.variable_defined?(var_name) ? '' : 'my '
+            return <<-EOS.gsub(/^ +/, '')
+              for #{my}$#{var_name} #{obj_to_perl call_node.receiver} {
+                #{obj_to_perl block}
+              }
+            EOS
+          end
+        end
+
         receiver = call_node.receiver ? "#{obj_to_perl call_node.receiver}->" : ''
         method = call_node.method_name.to_s
-        args = call_node.arglist.arguments.map {|a| obj_to_perl a}.join(', ')
+        args = call_node.arglist.map {|a| obj_to_perl a}.join(', ')
+        if block
+          args += ', ' unless args.empty?
+          args += block_to_perl block, block_args
+        elsif call_node.receiver.nil? && args.empty?
+          if call_node.scope.variable_defined? method
+            return "$#{method}"
+          end
+        end
         "#{receiver}#{method}(#{args})#{semicolon}"
       end
     end
 
     def is_binary_operator(op)
-      %w(+ - * /).include? op.to_s
+      %w(+ - * / < > <= >= == === eq).include? op.to_s
+    end
+
+    def block_to_perl(block, args)
+      asgn_args = if args
+          args.arguments.map do |arg|
+            "my $#{arg} = shift;"
+          end.join "\n"
+        else
+          ''
+        end
+      <<-EOS.gsub(/^ +/, '')
+        sub {
+          #{asgn_args}
+          #{obj_to_perl block}
+        }
+      EOS
     end
 
     def lasgn_node_to_perl(obj)
@@ -170,6 +206,9 @@ module Sapphire
         if arg.to_s =~ /^\*(.*)/
           obj.scope.define_variable $1, :array
           "my @#{$1} = @_;"
+        elsif arg.to_s =~ /^\&(.*)/
+          obj.scope.define_variable $1, :block
+          "my $#{$1} = shift;"
         else
           obj.scope.define_variable arg
           "my $#{arg} = shift;"
@@ -214,9 +253,10 @@ module Sapphire
 
     def const_node_to_perl(obj)
       name = obj.const_name.to_s
-      if obj.parent.is_a? Node::ArglistNode
-        const_def = obj.scope.constant_definition name
-        sigil = const_def && const_def.type == :array ? '@' : '$'
+      if obj.parent.is_a?(Node::CallNode) && obj.parent.receiver != obj
+        # in arglist
+        const_def = obj.scope.constant_definition name.to_sym
+        sigil = const_def ? const_def.sigil : '$'
         "#{sigil}#{name}"
       else
         name
@@ -226,14 +266,22 @@ module Sapphire
     def attrasgn_node_to_perl(obj)
       receiver = obj.receiver.var_name
       attr = obj.method_name.to_s.sub('=', '')
-      val = obj_to_perl obj.arglist
-      "$#{receiver}->#{attr}(#{val});"
+      if attr == '[]'
+        index = obj_to_perl obj.arguments[2]
+        val = obj_to_perl obj.arguments[3]
+        "$#{receiver}->{#{index}} = #{val};"
+      else
+        val = obj_to_perl obj.value
+        "$#{receiver}->#{attr}(#{val});"
+      end
     end
 
     def lvar_node_to_perl(obj)
       var_def = obj.scope.variable_definition obj.var_name
       if var_def && var_def.type == :array
         "@#{obj.var_name}"
+      elsif var_def && var_def.type == :block
+        "$#{obj.var_name}"
       else
         "$#{obj.var_name}"
       end
@@ -276,8 +324,11 @@ module Sapphire
     end
 
     def cdecl_node_to_perl(obj)
-      sigil = obj.value.is_a?(Node::ArrayNode) ? '@' : '$'
-      "use constant #{sigil}#{obj_to_perl obj.const_name} => #{obj_to_perl obj.value};"
+      name = obj_to_perl obj.const_name
+      value = obj_to_perl obj.value
+      type = obj.value.is_a?(Node::ArrayNode) ? :array : :ref
+      const_def = obj.scope.define_constant name, type
+      "use constant #{const_def.sigil}#{name} => #{value};"
     end
 
     def masgn_node_to_perl(obj)
@@ -286,19 +337,37 @@ module Sapphire
         ret = ''
         values = obj.values.value.var_name
         obj.lasgns.arguments.each_with_index do |elm, i|
-          ret += "my $#{elm.var_name} = $#{values}->[#{i}];\n"
+          obj.scope.define_variable elm.var_name
+          ret += "my $#{elm.var_name} = $#{values}[#{i}];\n"
         end
         ret
       when Node::ArrayNode
         ret = ''
         values = obj.values.arguments
         obj.lasgns.arguments.each_with_index do |elm, i|
+          obj.scope.define_variable elm.var_name
           ret += "my $#{elm.var_name} = #{obj_to_perl values[i]};\n"
         end
         ret
       else
         raise 'must be a splat node or an array node'
       end
+    end
+
+    def while_node_to_perl(obj)
+      <<-EOS.gsub /^ +/, ''
+        while (#{obj_to_perl obj.condition}) {
+          #{obj_to_perl obj.body}
+        }
+      EOS
+    end
+
+    def until_node_to_perl(obj)
+      <<-EOS.gsub /^ +/, ''
+        until (#{obj_to_perl obj.condition}) {
+          #{obj_to_perl obj.body}
+        }
+      EOS
     end
   end
 end

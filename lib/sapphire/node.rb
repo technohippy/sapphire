@@ -15,6 +15,16 @@ module Sapphire
         end
       end
 
+      def self.body_reader(range=1..-1)
+        self.class_eval <<-EOS
+          def body
+            body = BlockNode.new *@arguments[#{range.inspect}]
+            body.parent = self
+            body
+          end
+        EOS
+      end
+
       def initialize(*arguments)
         (@arguments = arguments).each {|arg| arg.parent = self if arg.is_a? Base}
       end
@@ -37,11 +47,26 @@ module Sapphire
         @arguments.each do |arg|
           arg.setup scope if arg.is_a? Base
         end
+        _setup
         self
+      end
+
+      def _setup
+        # for subclasses
       end
 
       def to_s
         "#{self.class.name}(#{@arguments.map(&:to_s).join(', ')})"
+      end
+    end
+
+    class KeywordBase < Base
+      def self.set_keyword(name)
+        self.class_eval <<-EOS
+          def keyword
+            #{name.inspect}
+          end
+        EOS
       end
     end
 
@@ -55,14 +80,14 @@ module Sapphire
     end
 
     class IterNode < Base
+      body_reader 2..-1
     end
 
     class CallNode < Base
-      #args_reader :receiver, :method_name, :arglist
       args_reader :receiver, :method_name
 
-      def arglist # TODO
-        ArglistNode.new *@arguments[2..-1]
+      def arglist
+        @arguments[2..-1]
       end
     end
 
@@ -73,27 +98,16 @@ module Sapphire
       args_reader :value
     end
 
-    class ArglistNode < Base
-    end
-
     class LasgnNode < Base
       args_reader :var_name, :value
     end
 
     class DefnNode < ScopedBase
-      #args_reader :method_name, :method_args, :body
       args_reader :method_name, :method_args
+      body_reader 2..-1
 
-      def body # TODO
-        body = BlockNode.new *@arguments[2..-1]
-        body.parent = self
-        body
-      end
-
-      def setup(scope=Scope.new)
-        super
+      def _setup
         @scope.define_method method_name
-        self
       end
     end
 
@@ -104,14 +118,8 @@ module Sapphire
     end
 
     class ClassNode < Base
-      #args_reader :class_name, :super_class, :body
       args_reader :class_name, :super_class
-
-      def body # TODO
-        body = BlockNode.new *@arguments[2..-1]
-        body.parent = self
-        body
-      end
+      body_reader 2..-1
     end
 
     class ConstNode < Base
@@ -119,7 +127,7 @@ module Sapphire
     end
 
     class AttrasgnNode < Base
-      args_reader :receiver, :method_name, :arglist
+      args_reader :receiver, :method_name, :value
     end
 
     class StrNode < Base
@@ -130,23 +138,12 @@ module Sapphire
       args_reader :var_name
     end
 
-    class NilNode < Base
-    end
-
     class ModuleNode < ScopedBase
-      #args_reader :module_name, :body
       args_reader :module_name
+      body_reader
 
-      def setup(scope=Scope.new)
-        super
+      def _setup
         @scope.module = self.module_name
-        self
-      end
-
-      def body # TODO
-        body = BlockNode.new *@arguments[1..-1]
-        body.parent = self
-        body
       end
     end
 
@@ -157,9 +154,6 @@ module Sapphire
     class Colon3Node < Base
       attr_reader :head # always nil
       args_reader :tail
-    end
-
-    class SelfNode < Base
     end
 
     class ReturnNode < Base
@@ -195,10 +189,8 @@ module Sapphire
     class CdeclNode < Base
       args_reader :const_name, :value
 
-      def setup(scope=Scope.new)
-        super
+      def _setup
         @scope.define_constant const_name, self.value.is_a?(ArrayNode) ? :array : :ref
-        self
       end
     end
 
@@ -208,6 +200,40 @@ module Sapphire
 
     class SplatNode < Base
       args_reader :value
+    end
+
+    class WhileNode < ScopedBase
+      args_reader :condition
+      body_reader 1..-2
+    end
+
+    class UntilNode < ScopedBase
+      args_reader :condition
+      body_reader 1..-2
+    end
+
+    class SelfNode < KeywordBase
+      set_keyword '$self'
+    end
+
+    class BreakNode < KeywordBase
+      set_keyword 'break;'
+    end
+
+    class NextNode < KeywordBase
+      set_keyword 'next;'
+    end
+
+    class NilNode < KeywordBase
+      set_keyword 'nil'
+    end
+
+    class TrueNode < KeywordBase
+      set_keyword 'true'
+    end
+
+    class FalseNode < KeywordBase
+      set_keyword 'false'
     end
   end
 end

@@ -32,17 +32,257 @@ class TestPerlGenerator < Test::Unit::TestCase
     ACTUAL
   end
 
+  def test_generate_if
+    assert_code <<-EXPECTED, <<-ACTUAL
+      if (bool()) {
+        do_something()
+      }
+      else {
+        do_other()
+      }
+    EXPECTED
+      if bool
+        do_something
+      else
+        do_other
+      end
+    ACTUAL
+
+    # TODO: how to handle dangling elses
+    assert_code <<-EXPECTED, <<-ACTUAL
+      if (bool()) {
+        do_something()
+      }
+      else {
+        if (bool2()) {
+          do_anotherthing()
+        }
+        else {
+          do_other()
+        }
+
+      }
+    EXPECTED
+      if bool
+        do_something
+      elsif bool2
+        do_anotherthing
+      else
+        do_other
+      end
+    ACTUAL
+
+    assert_code <<-EXPECTED, <<-ACTUAL
+      if (bool()) {
+        do_something()
+      }
+      else {
+        do_other()
+      }
+    EXPECTED
+      bool ? do_something : do_other
+    ACTUAL
+
+    # TODO
+    assert_code <<-EXPECTED, <<-ACTUAL
+      if (bool()) {
+        do_something()
+      }
+    EXPECTED
+      do_something if bool
+    ACTUAL
+
+    # TODO
+    assert_code <<-EXPECTED, <<-ACTUAL
+      if (bool()) {
+        do_something()
+      }
+      else {
+        do_otherthing()
+      }
+    EXPECTED
+      bool ? do_something : do_otherthing
+    ACTUAL
+  end
+
+  def test_generate_unless
+    assert_code <<-EXPECTED, <<-ACTUAL
+      unless (bool()) {
+        do_something()
+      }
+    EXPECTED
+      do_something unless bool
+    ACTUAL
+  end
+
+=begin
+  def test_generate_case
+    assert_code <<-EXPECTED, <<-ACTUAL
+      if ($val eq "abc") {
+        print("abc" . "\n");
+      }
+      elsif ($val eq "def") {
+        print("def" . "\n");
+      }
+      else {
+        print("else" . "\n");
+      }
+    EXPECTED
+      case val
+      when 'abc'
+        puts 'abc'
+      when 'def'
+        puts 'def'
+      else
+        puts 'else'
+      end
+    ACTUAL
+  end
+=end
+
+  def test_generate_while
+    assert_code <<-EXPECTED, <<-ACTUAL
+      while (true) {
+        do_something();
+      }
+    EXPECTED
+      while (true)
+        do_something
+      end
+    ACTUAL
+
+    assert_code <<-EXPECTED, <<-ACTUAL
+      my $count = 0;
+      while (true) {
+        do_something();
+        $count = $count + 1;
+        if (5 < $count) {
+          break;
+        }
+
+      }
+    EXPECTED
+      count = 0
+      while (true)
+        do_something
+        count += 1
+        break if 5 < count ;
+      end
+    ACTUAL
+
+    assert_code <<-EXPECTED, <<-ACTUAL
+      while (true) {
+        do_something();
+        next;
+      }
+    EXPECTED
+      while (true)
+        do_something
+        next
+      end
+    ACTUAL
+  end
+
+  def test_generate_until
+    assert_code <<-EXPECTED, <<-ACTUAL
+      my $count = 0;
+      until (2 <= $count) {
+        do_something();
+        $count = $count + 1;
+      }
+    EXPECTED
+      count = 0
+      until (2 <= count)
+        do_something
+        count += 1
+      end
+    ACTUAL
+  end
+
+  def test_generate_scope
+    assert_code <<-EXPECTED, <<-ACTUAL
+      my $var1 = 0;
+      if (true) {
+        $var1 = 1;
+        my $var2 = 2;
+      }
+    EXPECTED
+      var1 = 0
+      if true
+        var1 = 1
+        var2 = 2
+      end
+    ACTUAL
+
+    assert_code <<-EXPECTED, <<-ACTUAL
+      my $var1 = 0;
+      while (true) {
+        $var1 = 1;
+        my $var2 = 2;
+      }
+    EXPECTED
+      var1 = 0
+      while true
+        var1 = 1
+        var2 = 2
+      end
+    ACTUAL
+
+    assert_code <<-EXPECTED.strip, <<-ACTUAL
+      my $var1 = 0;
+      while (true) {
+        $var1 = 1;
+        my $var2 = 2;
+        if (true) {
+          $var1 = 2;
+          $var2 = 3;
+          my $var3 = 3;
+        }
+
+      }
+
+      my $var3 = 0;
+    EXPECTED
+      var1 = 0
+      while true
+        var1 = 1
+        var2 = 2
+        if true
+          var1 = 2
+          var2 = 3
+          var3 = 3
+        end
+      end
+      var3 = 0
+    ACTUAL
+  end
+
   def test_generate_defun
     assert_code <<-EXPECTED, <<-ACTUAL
       sub foo {
         my $bar = shift;
+        my $buzz = shift;
         print($bar . "\\n");
+        print($buzz . "\\n");
       }
     EXPECTED
-      def foo(bar)
+      def foo(bar, buzz)
         puts bar
+        puts buzz
       end
     ACTUAL
+
+=begin
+    assert_code <<-EXPECTED, <<-ACTUAL
+      sub foo {
+        my $bar = shift || 1;
+      }
+    EXPECTED
+      def foo(bar=1)
+      end
+    ACTUAL
+=end
+
     assert_code <<-EXPECTED, <<-ACTUAL
       sub foo {
         my $bar = shift;
@@ -54,6 +294,116 @@ class TestPerlGenerator < Test::Unit::TestCase
       def foo(bar, *buzz)
         puts bar
         puts buzz[0]
+      end
+    ACTUAL
+
+    assert_code <<-EXPECTED, <<-ACTUAL
+      sub foo {
+        my @bar = @_;
+        my $buzz = $bar[0];
+        my $xyzzy = $bar[1];
+
+      }
+    EXPECTED
+      def foo(*bar)
+        buzz, xyzzy = *bar
+      end
+    ACTUAL
+
+    assert_code <<-EXPECTED, <<-ACTUAL
+      sub foo {
+        my $block = shift;
+        $block->(1, 2, 3);
+      }
+    EXPECTED
+      def foo(&block)
+        block.call 1, 2, 3
+      end
+    ACTUAL
+  end
+
+  def test_generate_funcall
+    assert_code <<-EXPECTED.strip, <<-ACTUAL
+      func(arg1(), arg2());
+    EXPECTED
+      func arg1, arg2
+    ACTUAL
+
+    assert_code <<-EXPECTED.strip, <<-ACTUAL
+      my $arg2 = nil;
+      func(arg1(), $arg2);
+    EXPECTED
+      arg2 = nil
+      func arg1, arg2
+    ACTUAL
+
+    assert_code <<-EXPECTED.strip, <<-ACTUAL
+      my $arg2 = nil;
+      my $arg3 = nil;
+
+      func(arg1(), $arg2);
+    EXPECTED
+      arg2, arg3 = nil, nil
+      func arg1, arg2
+    ACTUAL
+
+    assert_code <<-EXPECTED.strip, <<-ACTUAL
+      outer(inner(arg1(), arg2()));
+    EXPECTED
+      outer inner(arg1, arg2)
+    ACTUAL
+
+    assert_code <<-EXPECTED, <<-ACTUAL
+      for my $e ary() {
+        print($e . "\\n");
+      }
+    EXPECTED
+      ary.each do |e|
+        puts e
+      end
+    ACTUAL
+
+    assert_code <<-EXPECTED.strip, <<-ACTUAL
+      sub func {
+        my $block = shift;
+        $block->(1, 2);
+      }
+
+      func(sub {
+          my $arg1 = shift;
+          my $arg2 = shift;
+          my $arg3 = $arg1 + $arg2;
+        }
+      );
+    EXPECTED
+      def func(&block)
+        block.call 1, 2
+      end
+      func do |arg1, arg2|
+        arg3 = arg1 + arg2
+      end
+    ACTUAL
+
+    assert_code <<-EXPECTED.strip, <<-ACTUAL
+      sub func {
+        my $arg1 = shift;
+        my $arg2 = shift;
+        my $block = shift;
+        $block->($arg1, $arg2);
+      }
+
+      func(arg1(), arg2(), sub {
+          my $arg3 = shift;
+          my $arg4 = shift;
+          my $arg5 = $arg3 + $arg4;
+        }
+      );
+    EXPECTED
+      def func(arg1, arg2, &block)
+        block.call arg1, arg2
+      end
+      func arg1, arg2 do |arg3, arg4|
+        arg5 = arg3 + arg4
       end
     ACTUAL
   end

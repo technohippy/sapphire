@@ -1,7 +1,7 @@
+require 'sapphire/variable_def'
+
 module Sapphire
   class Scope
-    VarDef = Struct.new :name, :type # type should be :ref (default), :array or :hash
-
     attr_accessor :module
 
     def initialize(parent=NilScope.new)
@@ -24,7 +24,9 @@ module Sapphire
     end
 
     def define_constant(constant_name, type=:ref)
-      @constant_names.push VarDef.new(constant_name.to_sym, type)
+      define = VariableDef.new(constant_name.to_sym, type)
+      @constant_names.push define
+      define
     end
 
     def constant_defined?(constant_name)
@@ -37,11 +39,11 @@ module Sapphire
     end
 
     def define_variable(variable_name, type=:ref)
-      @variable_names.push VarDef.new(variable_name.to_sym, type)
+      @variable_names.push VariableDef.new(variable_name.to_sym, type)
     end
 
     def variable_defined?(variable_name)
-      (not @variable_names.find{|defs| defs.name == variable_name}.nil?) || @parent.variable_defined?(variable_name)
+      (not @variable_names.find{|defs| defs.name.to_s == variable_name.to_s}.nil?) || @parent.variable_defined?(variable_name)
     end
 
     def variable_definition(variable_name)
