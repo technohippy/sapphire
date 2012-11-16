@@ -74,6 +74,10 @@ module Sapphire
         until_node_to_perl obj
       when Node::KeywordBase
         obj.keyword
+      when Node::DstrNode
+        dstr_node_to_perl obj
+      when Node::EvstrNode
+        obj_to_perl obj.expression
 
       when Node::Base
         obj.arguments.map {|a| obj_to_perl a}.join("\n")
@@ -136,6 +140,9 @@ module Sapphire
         else
           "(ref #{obj_to_perl call_node.receiver} eq '#{arg}')#{semicolon}"
         end
+      elsif is_unary_operator call_node.method_name
+        method = call_node.method_name.to_s.sub /@$/, ''
+        "#{method}(#{obj_to_perl call_node.receiver})#{semicolon}"
       else
         block = nil
         block_args = nil
@@ -146,7 +153,7 @@ module Sapphire
             var_name = block_args.arguments.first
             my = call_node.scope.variable_defined?(var_name) ? '' : 'my '
             return <<-EOS.gsub(/^ +/, '')
-              for #{my}$#{var_name} #{obj_to_perl call_node.receiver} {
+              for #{my}$#{var_name} (#{obj_to_perl call_node.receiver}) {
                 #{obj_to_perl block}
               }
             EOS
@@ -169,6 +176,10 @@ module Sapphire
         end
         "#{receiver}#{method}(#{args})#{semicolon}"
       end
+    end
+
+    def is_unary_operator(op)
+      op.to_s =~ /^(.*)@$/ || op.to_s =~ /^(!)$/
     end
 
     def is_binary_operator(op)
@@ -379,6 +390,10 @@ module Sapphire
           #{obj_to_perl obj.body}
         }
       EOS
+    end
+
+    def dstr_node_to_perl(obj)
+      ([obj.str.inspect] + obj.arguments[1..-1].map{|e| obj_to_perl e}).join ' . '
     end
   end
 end

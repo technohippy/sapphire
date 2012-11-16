@@ -225,7 +225,7 @@ module Sapphire
     end
 
     class NilNode < KeywordBase
-      set_keyword 'nil'
+      set_keyword 'undef'
     end
 
     class TrueNode < KeywordBase
@@ -234,6 +234,14 @@ module Sapphire
 
     class FalseNode < KeywordBase
       set_keyword 'false'
+    end
+
+    class DstrNode < Base
+      args_reader :str
+    end
+
+    class EvstrNode < Base
+      args_reader :expression
     end
   end
 end

@@ -32,6 +32,18 @@ class TestPerlGenerator < Test::Unit::TestCase
     ACTUAL
   end
 
+  def test_generate_dstr
+    assert_code '"Hello, " . world() . "!"', '"Hello, #{world}!"'
+    assert_code '"" . hello() . ", world!"', '"#{hello}, world!"'
+    assert_code <<-EXPECTED.strip, <<-ACTUAL
+      my $world = "world";
+      "Hello, " . $world . "!"
+    EXPECTED
+      world = 'world'
+      "Hello, \#{world}!"
+    ACTUAL
+  end
+
   def test_generate_if
     assert_code <<-EXPECTED, <<-ACTUAL
       if (bool()) {
@@ -72,6 +84,7 @@ class TestPerlGenerator < Test::Unit::TestCase
       end
     ACTUAL
 
+    # TODO
     assert_code <<-EXPECTED, <<-ACTUAL
       if (bool()) {
         do_something()
@@ -90,18 +103,6 @@ class TestPerlGenerator < Test::Unit::TestCase
       }
     EXPECTED
       do_something if bool
-    ACTUAL
-
-    # TODO
-    assert_code <<-EXPECTED, <<-ACTUAL
-      if (bool()) {
-        do_something()
-      }
-      else {
-        do_otherthing()
-      }
-    EXPECTED
-      bool ? do_something : do_otherthing
     ACTUAL
   end
 
@@ -330,7 +331,7 @@ class TestPerlGenerator < Test::Unit::TestCase
     ACTUAL
 
     assert_code <<-EXPECTED.strip, <<-ACTUAL
-      my $arg2 = nil;
+      my $arg2 = undef;
       func(arg1(), $arg2);
     EXPECTED
       arg2 = nil
@@ -338,8 +339,8 @@ class TestPerlGenerator < Test::Unit::TestCase
     ACTUAL
 
     assert_code <<-EXPECTED.strip, <<-ACTUAL
-      my $arg2 = nil;
-      my $arg3 = nil;
+      my $arg2 = undef;
+      my $arg3 = undef;
 
       func(arg1(), $arg2);
     EXPECTED
@@ -353,8 +354,9 @@ class TestPerlGenerator < Test::Unit::TestCase
       outer inner(arg1, arg2)
     ACTUAL
 
+    # TODO
     assert_code <<-EXPECTED, <<-ACTUAL
-      for my $e ary() {
+      for my $e (ary()) {
         print($e . "\\n");
       }
     EXPECTED
@@ -405,6 +407,20 @@ class TestPerlGenerator < Test::Unit::TestCase
       func arg1, arg2 do |arg3, arg4|
         arg5 = arg3 + arg4
       end
+    ACTUAL
+
+    assert_code <<-EXPECTED.strip, <<-ACTUAL
+      my $a = 1;
+      my $b = -($a);
+      my $c = true;
+      my $d = !($c);
+      func(-($b), !($d));
+    EXPECTED
+      a = 1
+      b = -a
+      c = true
+      d = !c
+      func -b, !d
     ACTUAL
   end
 
