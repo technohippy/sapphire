@@ -157,7 +157,7 @@ class TestPerlGenerator < Test::Unit::TestCase
       };
       if ($@) {
         my $e = $@;
-        print($e . "\\n");
+        say($e);
       }
     EXPECTED
       begin
@@ -172,13 +172,13 @@ class TestPerlGenerator < Test::Unit::TestCase
   def test_generate_case
     assert_code <<-EXPECTED, <<-ACTUAL
       if ($val eq "abc") {
-        print("abc" . "\n");
+        say("abc");
       }
       elsif ($val eq "def") {
-        print("def" . "\n");
+        say("def");
       }
       else {
-        print("else" . "\n");
+        say("else");
       }
     EXPECTED
       case val
@@ -315,8 +315,8 @@ class TestPerlGenerator < Test::Unit::TestCase
       sub foo {
         my $bar = shift;
         my $buzz = shift;
-        print($bar . "\\n");
-        print($buzz . "\\n");
+        say($bar);
+        say($buzz);
       }
     EXPECTED
       def foo(bar, buzz)
@@ -340,8 +340,8 @@ class TestPerlGenerator < Test::Unit::TestCase
       sub foo {
         my $bar = shift;
         my @buzz = @_;
-        print($bar . "\\n");
-        print($buzz[0] . "\\n");
+        say($bar);
+        say($buzz[0]);
       }
     EXPECTED
       def foo(bar, *buzz)
@@ -409,7 +409,7 @@ class TestPerlGenerator < Test::Unit::TestCase
     # TODO
     assert_code <<-EXPECTED, <<-ACTUAL
       for my $e (ary()) {
-        print($e . "\\n");
+        say($e);
       }
     EXPECTED
       ary.each do |e|

@@ -104,7 +104,7 @@ module Sapphire
         "#{obj_to_perl call_node.receiver} #{call_node.method_name} #{
           obj_to_perl call_node.arglist.first}#{semicolon}"
       elsif call_node.receiver.nil? && call_node.method_name == :puts
-        %Q|print(#{obj_to_perl call_node.arglist.first} . "\\n")#{semicolon}|
+        %Q|say(#{obj_to_perl call_node.arglist.first})#{semicolon}|
       elsif call_node.receiver.nil? && call_node.method_name == :require
         mod = call_node.arglist.first.value.to_s
         mod = mod.split('/').map{|e| e.capitalize.gsub(/_([a-z])/){$1.upcase}}.join '::'
