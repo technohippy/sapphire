@@ -243,5 +243,34 @@ module Sapphire
     class EvstrNode < Base
       args_reader :expression
     end
+
+    class RescueNode < Base
+      args_reader :body, :rescue_body
+    end
+
+    class ResbodyNode < Base
+      args_reader :array
+      body_reader 1..-1
+
+      def rescue_args
+        array.arguments
+      end
+
+      def exception_class
+        if rescue_args.first.is_a? ConstNode
+          rescue_args.first.const_name
+        else
+          nil
+        end
+      end
+
+      def exception_name
+        if rescue_args.last.is_a? LasgnNode
+          rescue_args.last.var_name
+        else
+          nil
+        end
+      end
+    end
   end
 end

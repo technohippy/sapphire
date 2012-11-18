@@ -78,6 +78,8 @@ module Sapphire
         dstr_node_to_perl obj
       when Node::EvstrNode
         obj_to_perl obj.expression
+      when Node::RescueNode
+        rescue_node_to_perl obj
 
       when Node::Base
         obj.arguments.map {|a| obj_to_perl a}.join("\n")
@@ -394,6 +396,18 @@ module Sapphire
 
     def dstr_node_to_perl(obj)
       ([obj.str.inspect] + obj.arguments[1..-1].map{|e| obj_to_perl e}).join ' . '
+    end
+
+    def rescue_node_to_perl(obj)
+      rescue_var = obj.rescue_body.exception_name
+      <<-EOS.gsub /^ +/, ''
+        eval {
+          #{obj_to_perl obj.body}
+        };
+        if ($@) {#{rescue_var ? "\nmy $#{rescue_var} = $@;" : ''}
+          #{obj_to_perl obj.rescue_body.body}
+        }
+      EOS
     end
   end
 end

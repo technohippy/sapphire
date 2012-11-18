@@ -116,6 +116,58 @@ class TestPerlGenerator < Test::Unit::TestCase
     ACTUAL
   end
 
+  def test_generate_exception
+    assert_code <<-EXPECTED, <<-ACTUAL
+      eval {
+        1 / 0
+      };
+      if ($@) {
+        recover();
+      }
+    EXPECTED
+      begin
+        1 / 0
+      rescue
+        recover
+      end
+    ACTUAL
+
+    assert_code <<-EXPECTED, <<-ACTUAL
+      eval {
+        do_something();
+        1 / 0;
+      };
+      if ($@) {
+        recover();
+        recover_more();
+      }
+    EXPECTED
+      begin
+        do_something
+        1 / 0
+      rescue
+        recover
+        recover_more
+      end
+    ACTUAL
+
+    assert_code <<-EXPECTED, <<-ACTUAL
+      eval {
+        1 / 0
+      };
+      if ($@) {
+        my $e = $@;
+        print($e . "\\n");
+      }
+    EXPECTED
+      begin
+        1 / 0
+      rescue => e
+        puts e
+      end
+    ACTUAL
+  end
+
 =begin
   def test_generate_case
     assert_code <<-EXPECTED, <<-ACTUAL
