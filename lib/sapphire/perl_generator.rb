@@ -3,7 +3,7 @@ require 'sapphire/node'
 
 module Sapphire
   class PerlGenerator < Generator
-    DEFAULT_PREFIX = "use strict;\nuse warnings;\n"
+    DEFAULT_PREFIX = "use 5.010;\nuse strict;\nuse warnings;\n"
     DEFAULT_SUFFIX = "\n1;"
 
     def initialize(prefix=DEFAULT_PREFIX, suffix=DEFAULT_SUFFIX)
@@ -114,10 +114,13 @@ module Sapphire
           lit.value.to_s}.join(' ')}))#{semicolon}"
       elsif call_node.method_name == :[]
         receiver = obj_to_perl call_node.receiver
+        index = obj_to_perl call_node.arglist.first
         if receiver =~ /^@(.*)/
-          "$#{$1}[#{obj_to_perl call_node.arglist.first}]#{semicolon}"
+          "$#{$1}[#{index}]#{semicolon}"
+        elsif index =~ /^\d+$/
+          "#{receiver}->[#{index}]#{semicolon}"
         else
-          "#{receiver}->{#{obj_to_perl call_node.arglist.first}}#{semicolon}"
+          "#{receiver}->{#{index}}#{semicolon}"
         end
       elsif call_node.method_name == :call # TODO: assume that the receiver is a block
         "#{obj_to_perl call_node.receiver}->(#{call_node.arglist.map {|a| obj_to_perl a}.join(', ')})#{semicolon}"

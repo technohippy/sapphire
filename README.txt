@@ -4,58 +4,59 @@
 
 == DESCRIPTION:
 
-Sapphire is a ruby to perl compiler. I'm developing this just for fun.
+Sapphire is a ruby to perl compiler. Note that the purpose of Sapphire for now is not converting a ruby program into a perl program but writing a perl program in a rubyish manner.
 
 == FEATURES/PROBLEMS:
 
-* FOR LIGHT PURPOSES ONLY.
+* FOR LIGHT PURPOSES ONLY. I'm developing this just for fun.
 
 == SYNOPSIS:
 
-  $ cat example/ex0.rb 
-  [1, 2, 3, 4].each do |a|
-    puts a
+=== See code
+
+  $ cat example/write_file.rb 
+  # http://learn.perl.org/examples/read_write_file.html
+  require 'path/class'
+  require 'autodie'
+
+  dir = dir '/tmp'
+  file = dir.file 'file.txt'
+  file_handle = file.openw
+  list = %w(a list of lines)
+  list.each do |line|
+    file_handle.print "#{line}\n"
   end
 
-  class Foo
-    attr_accessor :name
-  end
-  
-  yasushi = Foo.new
-  yasushi.name = 'ANDO Yasushi'
-  puts yasushi.name
+=== Convert
 
-  $ ruby -Ilib bin/sapphire example/ex0.rb 
+  $ ruby -Ilib -Iext/ruby_parser/ bin/sapphire example/write_file.rb 
   use strict;
   use warnings;
-  
-  for $a ( 1, 2, 3, 4 ) {
-      print( $a . "\n" );
+  use Path::Class;
+  use Autodie;
+  my $dir         = dir("/tmp");
+  my $file        = $dir->file("file.txt");
+  my $file_handle = $file->openw();
+  my @list        = ( "a", "list", "of", "lines" );
+  for my $line (@list) {
+      $file_handle->print( "" . $line . "\n" );
   }
-  
-  {
-  
-      package Foo;
-      use base 'Class::Accessor::Fast';
-      __PACKAGE__->mk_accessors(qw(name));
-  }
-  
-  my $yasushi = Foo->new();
-  $yasushi->name("ANDO Yasushi");
-  print( $yasushi->name() . "\n" );
+
   1;
 
-  $ ruby -Ilib bin/sapphire example/ex0.rb | perl
-  1
-  2
-  3
-  4
-  ANDO Yasushi
+=== Execute
+
+  $ ruby -Ilib -Iext/ruby_parser/ bin/sapphire example/write_file.rb | perl
+  $ cat /tmp/file.txt
+  a
+  list
+  of
+  lines
 
 == REQUIREMENTS:
 
 * ruby_parser
-* Perl::Tidy
+* Perl::Tidy (to prettify the result)
 * Class::Accessor::Fast (to execute a generated perl code)
 
 == INSTALL:

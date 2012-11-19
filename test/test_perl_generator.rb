@@ -24,11 +24,32 @@ class TestPerlGenerator < Test::Unit::TestCase
     assert_code 'my $var = 1;', 'var = 1'
     assert_code 'my @ary = (1, 2, 3);', 'ary = [1, 2, 3]'
     assert_code <<-EXPECTED.strip, <<-ACTUAL
+      my @ary = (1, 2, 3);
+      $ary[1];
+    EXPECTED
+      ary = [1, 2, 3]
+      ary[1]
+    ACTUAL
+    assert_code <<-EXPECTED.strip, <<-ACTUAL
+      my $ary = [(1, 2, 3)];
+      $ary->[1];
+    EXPECTED
+      ary = [1, 2, 3].to_arrayref
+      ary[1]
+    ACTUAL
+    assert_code <<-EXPECTED.strip, <<-ACTUAL
       my $var = "foo";
       $var = "bar";
     EXPECTED
       var = 'foo'
       var = 'bar'
+    ACTUAL
+    assert_code <<-EXPECTED.strip, <<-ACTUAL
+      my $workbook = undef;
+      $workbook->[1]->{"A3"};
+    EXPECTED
+      workbook = nil
+      workbook[1]['A3']
     ACTUAL
   end
 
