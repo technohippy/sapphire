@@ -245,7 +245,11 @@ module Sapphire
     end
 
     class RescueNode < Base
-      args_reader :body, :rescue_body
+      args_reader :body
+
+      def rescue_bodies
+        @arguments[1..-1]
+      end
     end
 
     class ResbodyNode < Base
@@ -271,6 +275,12 @@ module Sapphire
           nil
         end
       end
+    end
+
+    class BlockPassNode < Base
+    end
+
+    class ToAryNode < Base
     end
   end
 end

@@ -1,13 +1,6 @@
 require "test/unit"
 require "sapphire/perl_generator"
 
-=begin
-TEMPLATE:
-    assert_code <<-EXPECTED, <<-ACTUAL
-    EXPECTED
-    ACTUAL
-=end
-
 class TestPerlGenerator < Test::Unit::TestCase
   def setup
     @generator = Sapphire::PerlGenerator.new nil, nil
@@ -145,6 +138,7 @@ class TestPerlGenerator < Test::Unit::TestCase
       if ($@) {
         recover();
       }
+
     EXPECTED
       begin
         1 / 0
@@ -162,6 +156,7 @@ class TestPerlGenerator < Test::Unit::TestCase
         recover();
         recover_more();
       }
+
     EXPECTED
       begin
         do_something
@@ -180,11 +175,66 @@ class TestPerlGenerator < Test::Unit::TestCase
         my $e = $@;
         say($e);
       }
+
     EXPECTED
       begin
         1 / 0
       rescue => e
         puts e
+      end
+    ACTUAL
+
+    assert_code <<-EXPECTED, <<-ACTUAL
+      eval {
+        1 / 0
+      };
+      if ($@ && is_instance($@, "ZeroDivisionError")) {
+        say("error");
+      }
+
+    EXPECTED
+      begin
+        1 / 0
+      rescue ZeroDivisionError
+        puts 'error'
+      end
+    ACTUAL
+
+    assert_code <<-EXPECTED, <<-ACTUAL
+      eval {
+        1 / 0
+      };
+      if ($@ && is_instance($@, "ZeroDivisionError")) {
+        my $e = $@;
+        say($e);
+      }
+
+    EXPECTED
+      begin
+        1 / 0
+      rescue ZeroDivisionError => e
+        puts e
+      end
+    ACTUAL
+
+    assert_code <<-EXPECTED, <<-ACTUAL
+      eval {
+        1 / 0
+      };
+      if ($@ && is_instance($@, "ZeroDivisionError")) {
+        say("zero division");
+      }
+      else if ($@ && is_instance($@, "Exception")) {
+        say("exception");
+      }
+
+    EXPECTED
+      begin
+        1 / 0
+      rescue ZeroDivisionError
+        puts 'zero division'
+      rescue Exception
+        puts 'exception'
       end
     ACTUAL
   end

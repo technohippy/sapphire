@@ -11,8 +11,12 @@ module Sapphire
 
     private
 
+    def camelize(string)
+      string.capitalize.gsub(/_([a-z])/){$1.upcase}
+    end
+
     def to_node(type, *args)
-      eval("::Sapphire::Node::#{type.to_s.capitalize}Node").new *args
+      eval("::Sapphire::Node::#{camelize type.to_s}Node").new *args
     end
     alias s to_node
   end

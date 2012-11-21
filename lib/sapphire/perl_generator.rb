@@ -80,6 +80,8 @@ module Sapphire
         obj_to_perl obj.expression
       when Node::RescueNode
         rescue_node_to_perl obj
+      when Node::ResbodyNode
+        resbody_node_to_perl obj
 
       when Node::Base
         obj.arguments.map {|a| obj_to_perl a}.join("\n")
@@ -188,7 +190,7 @@ module Sapphire
     end
 
     def is_binary_operator(op)
-      %w(+ - * / < > <= >= == === eq).include? op.to_s
+      %w(+ - * / < > <= >= == === <=> eq).include? op.to_s
     end
 
     def block_to_perl(block, args)
@@ -361,13 +363,20 @@ module Sapphire
     def masgn_node_to_perl(obj)
       case obj.values
       when Node::SplatNode
-        ret = ''
-        values = obj.values.value.var_name
-        obj.lasgns.arguments.each_with_index do |elm, i|
-          obj.scope.define_variable elm.var_name
-          ret += "my $#{elm.var_name} = $#{values}[#{i}];\n"
+        if obj.values.value.is_a? Node::LvarNode
+          ret = ''
+          values = obj.values.value.var_name
+          obj.lasgns.arguments.each_with_index do |elm, i|
+            obj.scope.define_variable elm.var_name
+            ret += "my $#{elm.var_name} = $#{values}[#{i}];\n"
+          end
+          ret
+        else
+          vars = obj.lasgns.arguments.map do |a| 
+            "$#{obj_to_perl a.var_name}"
+          end
+          "my (#{vars.join ', '}) = #{obj_to_perl obj.values};\n"
         end
-        ret
       when Node::ArrayNode
         ret = ''
         values = obj.values.arguments
@@ -377,7 +386,7 @@ module Sapphire
         end
         ret
       else
-        raise 'must be a splat node or an array node'
+        raise "must be a splat node or an array node: #{obj.values.class.name}"
       end
     end
 
@@ -402,13 +411,22 @@ module Sapphire
     end
 
     def rescue_node_to_perl(obj)
-      rescue_var = obj.rescue_body.exception_name
+      rescue_bodies = obj.rescue_bodies.map{|e| obj_to_perl e}.join 'else '
       <<-EOS.gsub /^ +/, ''
         eval {
           #{obj_to_perl obj.body}
         };
-        if ($@) {#{rescue_var ? "\nmy $#{rescue_var} = $@;" : ''}
-          #{obj_to_perl obj.rescue_body.body}
+        #{rescue_bodies}
+      EOS
+    end
+
+    def resbody_node_to_perl(obj)
+      rescue_var = obj.exception_name
+      exception_class = obj.exception_class
+      <<-EOS.gsub /^ +/, ''
+        if ($@#{exception_class ? " && is_instance($@, \"#{exception_class}\")" : ''}) {#{
+          rescue_var ? "\nmy $#{rescue_var} = $@;" : ''}
+          #{obj_to_perl obj.body}
         }
       EOS
     end
