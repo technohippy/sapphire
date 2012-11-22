@@ -59,7 +59,7 @@ module Sapphire
       when Node::Match3Node
         "#{obj_to_perl obj.target} =~ #{obj_to_perl obj.regexp}"
       when Node::GvarNode
-        obj.gvar_name.to_s
+        gvar_node_to_perl obj
       when Node::NotNode
         "not #{obj_to_perl obj.first}"
       when Node::CdeclNode
@@ -101,55 +101,54 @@ module Sapphire
     end
 
     def call_node_to_perl(call_node)
-      semicolon = semicolon_if_needed call_node
       if call_node.receiver && self.is_binary_operator(call_node.method_name)
         "#{obj_to_perl call_node.receiver} #{call_node.method_name} #{
-          obj_to_perl call_node.arglist.first}#{semicolon}"
+          obj_to_perl call_node.arglist.first}"
       elsif call_node.receiver.nil? && call_node.method_name == :puts
-        %Q|say(#{obj_to_perl call_node.arglist.first})#{semicolon}|
+        %Q|say(#{obj_to_perl call_node.arglist.first})|
       elsif call_node.receiver.nil? && call_node.method_name == :require
         mod = call_node.arglist.first.value.to_s
         mod = mod.split('/').map{|e| e.capitalize.gsub(/_([a-z])/){$1.upcase}}.join '::'
-        "use #{mod}#{semicolon}"
+        "use #{mod}"
       elsif call_node.receiver.nil? && call_node.method_name == :attr_accessor
         "__PACKAGE__->mk_accessors(qw(#{call_node.arglist.map{|lit| 
-          lit.value.to_s}.join(' ')}))#{semicolon}"
+          lit.value.to_s}.join(' ')}))"
       elsif call_node.method_name == :[]
         receiver = obj_to_perl call_node.receiver
         index = obj_to_perl call_node.arglist.first
         if receiver =~ /^@(.*)/
-          "$#{$1}[#{index}]#{semicolon}"
+          "$#{$1}[#{index}]"
         elsif index =~ /^\d+$/
-          "#{receiver}->[#{index}]#{semicolon}"
+          "#{receiver}->[#{index}]"
         else
-          "#{receiver}->{#{index}}#{semicolon}"
+          "#{receiver}->{#{index}}"
         end
       elsif call_node.method_name == :call # TODO: assume that the receiver is a block
-        "#{obj_to_perl call_node.receiver}->(#{call_node.arglist.map {|a| obj_to_perl a}.join(', ')})#{semicolon}"
+        "#{obj_to_perl call_node.receiver}->(#{call_node.arglist.map {|a| obj_to_perl a}.join(', ')})"
       elsif call_node.receiver && call_node.method_name == :size
-        "(scalar @{#{obj_to_perl call_node.receiver}})#{semicolon}"
+        "(scalar @{#{obj_to_perl call_node.receiver}})"
       elsif call_node.receiver && call_node.method_name == :empty?
-        "(scalar @{#{obj_to_perl call_node.receiver}} == 0)#{semicolon}"
+        "(scalar @{#{obj_to_perl call_node.receiver}} == 0)"
       elsif call_node.receiver && call_node.method_name == :to_arrayref # TODO: remove this
-        "[#{obj_to_perl call_node.receiver}]#{semicolon}"
+        "[#{obj_to_perl call_node.receiver}]"
       elsif call_node.method_name == :map
         <<-EOS.gsub(/^ /, '')
           map {
             #{obj_to_perl call_node.next(2)}
-          } #{obj_to_perl call_node.receiver}#{semicolon}
+          } #{obj_to_perl call_node.receiver}
         EOS
       elsif call_node.receiver && [:find, :select].include?(call_node.method_name)
-        "(grep { #{obj_to_perl call_node.next(2)} } @{#{obj_to_perl call_node.receiver}}) != 0#{semicolon}"
+        "(grep { #{obj_to_perl call_node.next(2)} } @{#{obj_to_perl call_node.receiver}}) != 0"
       elsif call_node.method_name == :is_a?
         arg = obj_to_perl call_node.arglist.first
         if arg == 'Array'
-          "(ref #{obj_to_perl call_node.receiver} eq 'ARRAY')#{semicolon}"
+          "(ref #{obj_to_perl call_node.receiver} eq 'ARRAY')"
         else
-          "(ref #{obj_to_perl call_node.receiver} eq '#{arg}')#{semicolon}"
+          "(ref #{obj_to_perl call_node.receiver} eq '#{arg}')"
         end
       elsif is_unary_operator call_node.method_name
         method = call_node.method_name.to_s.sub /@$/, ''
-        "#{method}(#{obj_to_perl call_node.receiver})#{semicolon}"
+        "#{method}(#{obj_to_perl call_node.receiver})"
       else
         block = nil
         block_args = nil
@@ -181,8 +180,8 @@ module Sapphire
             return "$#{method}"
           end
         end
-        "#{receiver}#{method}(#{args})#{semicolon}"
-      end
+        "#{receiver}#{method}(#{args})"
+      end + (semicolon_if_needed call_node)
     end
 
     def is_unary_operator(op)
@@ -342,6 +341,10 @@ module Sapphire
           "#{obj_to_perl k} => #{obj_to_perl v}"
         end.join ', '
       }}"
+    end
+
+    def gvar_node_to_perl(obj)
+      obj.gvar_name == :$! ? '$@' : obj.gvar_name.to_s
     end
 
     def block_node_to_perl(obj)
