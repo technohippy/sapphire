@@ -655,13 +655,13 @@ class TestPerlGenerator < Test::Unit::TestCase
   def test_generate_inline_perl # symbol
     assert_code <<-EXPECTED, <<-ACTUAL
       sub func {
-
+        my $i = shift;
         for (my $i=0; $i <= 9; $i++) {
           print "$i\\n";
         }
       }
     EXPECTED
-      def func
+      def func(i)
         %s{
           for (my $i=0; $i <= 9; $i++) {
             print "$i\\n";
