@@ -656,14 +656,14 @@ class TestPerlGenerator < Test::Unit::TestCase
     assert_code <<-EXPECTED, <<-ACTUAL
       sub func {
         my $i = shift;
-        for (my $i=0; $i <= 9; $i++) {
+        for ($i=0; $i <= 9; $i++) {
           print "$i\\n";
         }
       }
     EXPECTED
       def func(i)
         %s{
-          for (my $i=0; $i <= 9; $i++) {
+          for ($i=0; $i <= 9; $i++) {
             print "$i\\n";
           }
         }
