@@ -85,6 +85,12 @@ module Sapphire
 
       when Node::Base
         obj.arguments.map {|a| obj_to_perl a}.join("\n")
+      when Symbol # inline perl
+        if obj.to_s.index "\n"
+          obj.to_s.strip
+        else
+          obj.to_s
+        end
       when String
         obj.inspect
       when Regexp
