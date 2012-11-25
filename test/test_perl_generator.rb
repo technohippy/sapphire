@@ -10,6 +10,29 @@ class TestPerlGenerator < Test::Unit::TestCase
     assert_equal expected.gsub(/^ +/, ''), @generator.generate(actual)
   end
 
+  def test_initialize
+    generator = Sapphire::PerlGenerator.new
+    assert_equal <<-EXPECTED.gsub(/^ +/, '').strip, generator.generate('1 + 1')
+      use 5.010;
+      use strict;
+      use warnings;
+      1 + 1;
+      1;
+    EXPECTED
+
+    generator = Sapphire::PerlGenerator.new "use My::Util;\n", "\nOK;"
+    assert_equal <<-EXPECTED.gsub(/^ +/, '').strip, generator.generate('1 + 1')
+      use My::Util;
+      1 + 1;
+      OK;
+    EXPECTED
+
+    generator = Sapphire::PerlGenerator.new nil, nil
+    assert_equal <<-EXPECTED.gsub(/^ +/, '').strip, generator.generate('1 + 1')
+      1 + 1;
+    EXPECTED
+  end
+
   def test_generate_general
     assert_code '1 + 1;', '1 + 1'
     assert_code 'method_call("abc");', 'method_call "abc"'
@@ -656,14 +679,14 @@ class TestPerlGenerator < Test::Unit::TestCase
     assert_code <<-EXPECTED, <<-ACTUAL
       sub func {
         my $i = shift;
-        for ($i=0; $i <= 9; $i++) {
+        for ($i = 0; $i <= 9; $i++) {
           print "$i\\n";
         }
       }
     EXPECTED
       def func(i)
         %s{
-          for ($i=0; $i <= 9; $i++) {
+          for ($i = 0; $i <= 9; $i++) {
             print "$i\\n";
           }
         }
