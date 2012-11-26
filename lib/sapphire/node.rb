@@ -33,6 +33,14 @@ module Sapphire
         @arguments[0]
       end
 
+      def [](idx)
+        @arguments[idx]
+      end
+
+      def []=(idx, val)
+        @arguments[idx] = val
+      end
+
       def next(step=1)
         raise 'step must be more than zero.' unless 0 < step
 

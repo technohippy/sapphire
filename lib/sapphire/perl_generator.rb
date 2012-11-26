@@ -115,10 +115,20 @@ module Sapphire
       elsif call_node.receiver.nil? && call_node.method_name == :require
         mod = call_node.arglist.first.value.to_s
         mod = mod.split('/').map{|e| e.capitalize.gsub(/_([a-z])/){$1.upcase}}.join '::'
-        "use #{mod}"
+        imports = if call_node.arglist[1]
+            " qw(#{call_node.arglist[1].arguments.map{|str| str.value.to_s}.join ' '})"
+          else
+            ''
+          end
+        "use #{mod}#{imports}"
       elsif call_node.receiver.nil? && call_node.method_name == :attr_accessor
         "__PACKAGE__->mk_accessors(qw(#{call_node.arglist.map{|lit| 
           lit.value.to_s}.join(' ')}))"
+      elsif call_node.receiver.is_a?(Node::SelfNode) && 
+        call_node.parent.is_a?(Node::BlockNode) && 
+        call_node.parent.parent.is_a?(Node::ClassNode)
+        # TODO
+        "__PACKAGE__->#{call_node.method_name}(#{call_node.arglist.map {|a| obj_to_perl a}.join(', ')})"
       elsif call_node.method_name == :[]
         receiver = obj_to_perl call_node.receiver
         index = obj_to_perl call_node.arglist.first
@@ -169,6 +179,8 @@ module Sapphire
                 #{obj_to_perl block}
               }
             EOS
+          elsif call_node.method_name == :lambda
+            return block_to_perl(block, block_args) + semicolon_if_needed(call_node.parent)
           end
         end
 
@@ -187,7 +199,7 @@ module Sapphire
           end
         end
         "#{receiver}#{method}(#{args})"
-      end + (semicolon_if_needed call_node)
+      end + semicolon_if_needed(call_node)
     end
 
     def is_unary_operator(op)
@@ -195,11 +207,13 @@ module Sapphire
     end
 
     def is_binary_operator(op)
-      %w(+ - * / < > <= >= == === <=> eq).include? op.to_s
+      %w(+ - * / % ** < > <= >= == != === <=> | ^ << >> && || 
+        .. and or eq ne cmp lt gt le ge).include? op.to_s
     end
 
     def block_to_perl(block, args)
-      asgn_args = if args
+      asgn_args = if args && args != 0
+          args[0] = :self if args.first == :__self__ # TODO
           args.arguments.map do |arg|
             "my $#{arg} = shift;"
           end.join "\n"

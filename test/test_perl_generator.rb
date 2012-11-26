@@ -587,6 +587,25 @@ class TestPerlGenerator < Test::Unit::TestCase
         end
       end
     ACTUAL
+
+    assert_code <<-EXPECTED, <<-ACTUAL
+      {
+        package Foo;
+        use base 'Bar';
+        __PACKAGE__->call_class_method();
+        sub buzz {
+          my $self = shift;
+
+        }
+
+      }
+    EXPECTED
+      class Foo < Bar
+        self.call_class_method
+        def buzz
+        end
+      end
+    ACTUAL
   end
 
   def test_generate_module
