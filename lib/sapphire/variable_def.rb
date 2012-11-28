@@ -1,15 +1,16 @@
 module Sapphire
   class VariableDef
-    attr_reader :name, :type
+    attr_reader :name, :kind, :type
 
-    # type should be :ref (default), :array, :hash or :block
-    def initialize(name, type=:ref)
+    # kind should be :ref (default), :array, :hash or :block
+    def initialize(name, kind=:ref, type=nil)
       @name = name
-      @type = type || :ref
+      @kind = kind || :ref
+      @type = type
     end
 
     def sigil
-      @type == :array ? '@' : '$'
+      @kind == :array ? '@' : '$'
     end
   end
 end

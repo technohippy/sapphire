@@ -29,6 +29,18 @@ module Sapphire
         (@arguments = arguments).each {|arg| arg.parent = self if arg.is_a? Base}
       end
 
+      def kind
+        @kind || default_kind
+      end
+
+      def kind=(t)
+        @kind = t
+      end
+
+      def default_kind
+        :ref
+      end
+
       def first
         @arguments[0]
       end
@@ -68,6 +80,12 @@ module Sapphire
       end
     end
 
+    class ScopedBase < Base
+      def setup(scope=Scope.new)
+        super scope.create_child
+      end
+    end
+
     class KeywordBase < Base
       def self.set_keyword(name)
         self.class_eval <<-EOS
@@ -78,17 +96,31 @@ module Sapphire
       end
     end
 
-    class ScopedBase < Base
-      def setup(scope=Scope.new)
-        super scope.create_child
+    class AndNode < Base
+      args_reader :left, :right
+    end
+
+    class ArgsNode < Base
+    end
+
+    class ArrayNode < Base
+      def kind
+        :array
       end
+    end
+
+    class AttrasgnNode < Base
+      args_reader :receiver, :method_name, :value
     end
 
     class BlockNode < Base
     end
 
-    class IterNode < Base
-      body_reader 2..-1
+    class BlockPassNode < Base
+    end
+
+    class BreakNode < KeywordBase
+      set_keyword 'break;'
     end
 
     class CallNode < Base
@@ -97,62 +129,27 @@ module Sapphire
       def arglist
         @arguments[2..-1]
       end
-    end
 
-    class ArrayNode < Base
-    end
-
-    class LitNode < Base
-      args_reader :value
-    end
-
-    class LasgnNode < Base
-      args_reader :var_name, :value
-    end
-
-    class DefnNode < ScopedBase
-      args_reader :method_name, :method_args
-      body_reader 2..-1
-
-      def _setup
-        @scope.define_method method_name
+      def kind
+        if self.method_name == :map
+          :array
+        else
+          super
+        end
       end
     end
 
-    class ArgsNode < Base
-    end
+    class CdeclNode < Base
+      args_reader :const_name, :value
 
-    class ScopeNode < ScopedBase
+      def _setup
+        @scope.define_constant const_name, self.value.is_a?(ArrayNode) ? :array : :ref
+      end
     end
 
     class ClassNode < Base
       args_reader :class_name, :super_class
       body_reader 2..-1
-    end
-
-    class ConstNode < Base
-      args_reader :const_name
-    end
-
-    class AttrasgnNode < Base
-      args_reader :receiver, :method_name, :value
-    end
-
-    class StrNode < Base
-      args_reader :value
-    end
-
-    class LvarNode < Base
-      args_reader :var_name
-    end
-
-    class ModuleNode < ScopedBase
-      args_reader :module_name
-      body_reader
-
-      def _setup
-        @scope.module = self.module_name
-      end
     end
 
     class Colon2Node < Base
@@ -164,84 +161,17 @@ module Sapphire
       args_reader :tail
     end
 
-    class ReturnNode < Base
-      args_reader :value
+    class ConstNode < Base
+      args_reader :const_name
     end
 
-    class IfNode < ScopedBase
-      args_reader :condition, :ok_body, :ng_body
-    end
-
-    class AndNode < Base
-      args_reader :left, :right
-    end
-
-    class OrNode < Base
-      args_reader :left, :right
-    end
-
-    class HashNode < Base
-    end
-
-    class Match3Node < Base
-      args_reader :regexp, :target
-    end
-
-    class GvarNode < Base
-      args_reader :gvar_name
-    end
-
-    class NotNode < Base
-    end
-
-    class CdeclNode < Base
-      args_reader :const_name, :value
+    class DefnNode < ScopedBase
+      args_reader :method_name, :method_args
+      body_reader 2..-1
 
       def _setup
-        @scope.define_constant const_name, self.value.is_a?(ArrayNode) ? :array : :ref
+        @scope.define_method method_name
       end
-    end
-
-    class MasgnNode < Base
-      args_reader :lasgns, :values
-    end
-
-    class SplatNode < Base
-      args_reader :value
-    end
-
-    class WhileNode < ScopedBase
-      args_reader :condition
-      body_reader 1..-2
-    end
-
-    class UntilNode < ScopedBase
-      args_reader :condition
-      body_reader 1..-2
-    end
-
-    class SelfNode < KeywordBase
-      set_keyword '$self'
-    end
-
-    class BreakNode < KeywordBase
-      set_keyword 'break;'
-    end
-
-    class NextNode < KeywordBase
-      set_keyword 'next;'
-    end
-
-    class NilNode < KeywordBase
-      set_keyword 'undef'
-    end
-
-    class TrueNode < KeywordBase
-      set_keyword 'true'
-    end
-
-    class FalseNode < KeywordBase
-      set_keyword 'false'
     end
 
     class DstrNode < Base
@@ -252,12 +182,94 @@ module Sapphire
       args_reader :expression
     end
 
-    class RescueNode < Base
-      args_reader :body
+    class FalseNode < KeywordBase
+      set_keyword 'false'
+    end
 
-      def rescue_bodies
-        @arguments[1..-1]
+    class GvarNode < Base
+      args_reader :gvar_name
+    end
+
+    class HashNode < Base
+    end
+
+    class IfNode < ScopedBase
+      args_reader :condition, :ok_body, :ng_body
+    end
+
+    class IterNode < Base
+      body_reader 2..-1
+
+      def kind
+        if self.first.is_a?(CallNode) && self.first.method_name == :map
+          :array
+        else
+          super
+        end
       end
+    end
+
+    class LasgnNode < Base
+      args_reader :var_name, :value
+    end
+
+    class LitNode < Base
+      args_reader :value
+    end
+
+    class LvarNode < Base
+      args_reader :var_name
+
+      def kind
+        var_def = self.scope.variable_definition self.var_name
+        if var_def
+          var_def.kind
+        else
+          super
+        end
+      end
+    end
+
+    class MasgnNode < Base
+      args_reader :lasgns, :values
+    end
+
+    class Match3Node < Base
+      args_reader :regexp, :target
+    end
+
+    class ModuleNode < ScopedBase
+      args_reader :module_name
+      body_reader
+
+      def _setup
+        @scope.module = self.module_name
+      end
+    end
+
+    class NextNode < KeywordBase
+      set_keyword 'next;'
+    end
+
+    class NilNode < KeywordBase
+      set_keyword 'undef'
+    end
+
+    class NotNode < Base
+    end
+
+    class NthRefNode < KeywordBase
+      def keyword
+        "$#{self.first}"
+      end
+    end
+
+    class OrNode < Base
+      args_reader :left, :right
+    end
+
+    class ReturnNode < Base
+      args_reader :value
     end
 
     class ResbodyNode < Base
@@ -285,10 +297,44 @@ module Sapphire
       end
     end
 
-    class BlockPassNode < Base
+    class RescueNode < Base
+      args_reader :body
+
+      def rescue_bodies
+        @arguments[1..-1]
+      end
+    end
+
+    class ScopeNode < ScopedBase
+    end
+
+    class SelfNode < KeywordBase
+      set_keyword '$self'
+    end
+
+    class SplatNode < Base
+      args_reader :value
+    end
+
+    class StrNode < Base
+      args_reader :value
     end
 
     class ToAryNode < Base
+    end
+
+    class TrueNode < KeywordBase
+      set_keyword 'true'
+    end
+
+    class UntilNode < ScopedBase
+      args_reader :condition
+      body_reader 1..-2
+    end
+
+    class WhileNode < ScopedBase
+      args_reader :condition
+      body_reader 1..-2
     end
   end
 end

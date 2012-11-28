@@ -3,7 +3,7 @@ require 'sapphire/node'
 
 module Sapphire
   class PerlGenerator < Generator
-    DEFAULT_PREFIX = "use 5.010;\nuse strict;\nuse warnings;\n"
+    DEFAULT_PREFIX = "use strict;\nuse warnings;\n"
     DEFAULT_SUFFIX = "\n1;"
 
     def initialize(prefix=DEFAULT_PREFIX, suffix=DEFAULT_SUFFIX)
@@ -16,81 +16,77 @@ module Sapphire
 
     def obj_to_perl(obj)
       case obj
-      when Node::IterNode
-        obj_to_perl obj.first
-      when Node::CallNode
-        call_node_to_perl obj
-      when Node::ArrayNode
-        "(#{obj.arguments.map {|a| obj_to_perl a}.join(', ')})"
-      when Node::LitNode
-        obj_to_perl obj.value
-      when Node::LasgnNode
-        lasgn_node_to_perl obj
-      when Node::DefnNode
-        defn_node_to_perl obj
+      when Node::AndNode
+        "#{obj_to_perl obj.left} and #{obj_to_perl obj.right}"
       when Node::ArgsNode
         obj.arguments.map {|a| obj_to_perl a}.join(', ')
+      when Node::ArrayNode
+        "(#{obj.arguments.map {|a| obj_to_perl a}.join(', ')})"
+      when Node::AttrasgnNode
+        attrasgn_node_to_perl obj
+      when Node::BlockNode
+        block_node_to_perl obj
+      when Node::CallNode
+        call_node_to_perl obj
+      when Node::CdeclNode
+        cdecl_node_to_perl obj
       when Node::ClassNode
         class_node_to_perl obj
       when Node::ConstNode
         const_node_to_perl obj
-      when Node::AttrasgnNode
-        attrasgn_node_to_perl obj
-      when Node::StrNode
-        obj.value.inspect
-      when Node::LvarNode
-        lvar_node_to_perl obj
-      when Node::ModuleNode
-        obj_to_perl obj.body
       when Node::Colon2Node
         "#{obj_to_perl obj.head}::#{obj_to_perl obj.tail}"
       when Node::Colon3Node
         obj_to_perl obj.tail
-      when Node::ReturnNode
-        "return #{obj_to_perl obj.value};"
-      when Node::IfNode
-        if_node_to_perl obj
-      when Node::AndNode
-        "#{obj_to_perl obj.left} and #{obj_to_perl obj.right}"
-      when Node::OrNode
-        "#{obj_to_perl obj.left} or #{obj_to_perl obj.right}"
-      when Node::HashNode
-        hash_node_to_perl obj
-      when Node::Match3Node
-        "#{obj_to_perl obj.target} =~ #{obj_to_perl obj.regexp}"
-      when Node::GvarNode
-        gvar_node_to_perl obj
-      when Node::NotNode
-        "not #{obj_to_perl obj.first}"
-      when Node::CdeclNode
-        cdecl_node_to_perl obj
-      when Node::MasgnNode
-        masgn_node_to_perl obj
-      when Node::BlockNode
-        block_node_to_perl obj
-      when Node::WhileNode
-        while_node_to_perl obj
-      when Node::UntilNode
-        until_node_to_perl obj
-      when Node::KeywordBase
-        obj.keyword
+      when Node::DefnNode
+        defn_node_to_perl obj
       when Node::DstrNode
         dstr_node_to_perl obj
       when Node::EvstrNode
         obj_to_perl obj.expression
-      when Node::RescueNode
-        rescue_node_to_perl obj
+      when Node::GvarNode
+        gvar_node_to_perl obj
+      when Node::HashNode
+        hash_node_to_perl obj
+      when Node::IfNode
+        if_node_to_perl obj
+      when Node::IterNode
+        obj_to_perl obj.first
+      when Node::LasgnNode
+        lasgn_node_to_perl obj
+      when Node::LitNode
+        obj_to_perl obj.value
+      when Node::LvarNode
+        lvar_node_to_perl obj
+      when Node::MasgnNode
+        masgn_node_to_perl obj
+      when Node::Match3Node
+        "#{obj_to_perl obj.target} =~ #{obj_to_perl obj.regexp}"
+      when Node::ModuleNode
+        obj_to_perl obj.body
+      when Node::NotNode
+        "not #{obj_to_perl obj.first}"
+      when Node::OrNode
+        "#{obj_to_perl obj.left} or #{obj_to_perl obj.right}"
       when Node::ResbodyNode
         resbody_node_to_perl obj
+      when Node::RescueNode
+        rescue_node_to_perl obj
+      when Node::ReturnNode
+        "return #{obj_to_perl obj.value};"
+      when Node::StrNode
+        obj.value.inspect
+      when Node::UntilNode
+        until_node_to_perl obj
+      when Node::WhileNode
+        while_node_to_perl obj
 
+      when Node::KeywordBase
+        obj.keyword
       when Node::Base
         obj.arguments.map {|a| obj_to_perl a}.join("\n")
       when Symbol # inline perl
-        if obj.to_s.index "\n"
-          obj.to_s.strip
-        else
-          obj.to_s
-        end
+        obj.to_s.index("\n") ? obj.to_s.strip : obj.to_s
       when String
         obj.inspect
       when Regexp
@@ -100,38 +96,64 @@ module Sapphire
       end
     end
 
-    def semicolon_if_needed(node)
-      node.parent.nil? || node.parent.is_a?(Node::BlockNode) || 
-        (node.parent.is_a?(Node::IterNode) && node.parent.parent.is_a?(Node::BlockNode)) ? 
-          ';' : ''
+    def attrasgn_node_to_perl(obj)
+      receiver = obj.receiver.var_name
+      attr = obj.method_name.to_s.sub('=', '')
+      if attr == '[]'
+        index = obj_to_perl obj.arguments[2]
+        val = obj_to_perl obj.arguments[3]
+        "$#{receiver}->{#{index}} = #{val};"
+      else
+        val = obj_to_perl obj.value
+        "$#{receiver}->#{attr}(#{val});"
+      end
     end
 
-    def call_node_to_perl(call_node)
-      if call_node.receiver && self.is_binary_operator(call_node.method_name)
-        "#{obj_to_perl call_node.receiver} #{call_node.method_name} #{
-          obj_to_perl call_node.arglist.first}"
-      elsif call_node.receiver.nil? && call_node.method_name == :puts
-        %Q|say(#{obj_to_perl call_node.arglist.first})|
-      elsif call_node.receiver.nil? && call_node.method_name == :require
-        mod = call_node.arglist.first.value.to_s
+    def block_node_to_perl(obj)
+      if obj.arguments.size == 1 && obj.first.is_a?(Node::NilNode)
+        ''
+      else
+        obj.arguments.map {|a| obj_to_perl a}.join("\n")
+      end
+    end
+
+    def call_node_to_perl(obj)
+      if obj.receiver && self.is_binary_operator(obj.method_name)
+        receiver = obj_to_perl obj.receiver
+        arg = obj_to_perl obj.arglist.first
+        method_name = 
+          if obj.method_name == :== && (receiver =~ /\".*\"/ || arg =~ /\".*\"/)
+            :eq
+          elsif obj.method_name == :'!=' && (receiver =~ /\".*\"/ || arg =~ /\".*\"/)
+            :ne
+          else
+            obj.method_name
+          end
+        "#{receiver} #{method_name} #{arg}"
+      elsif obj.receiver && obj.method_name == :to_i
+        "(0 + #{obj_to_perl obj.receiver})"
+      elsif obj.receiver.nil? && obj.method_name == :puts
+        %Q|print(#{obj_to_perl obj.arglist.first} . "\\n")|
+      elsif obj.receiver.nil? && obj.method_name == :require
+        mod = obj.arglist.first.value.to_s
         mod = mod.split('/').map{|e| e.capitalize.gsub(/_([a-z])/){$1.upcase}}.join '::'
-        imports = if call_node.arglist[1]
-            " qw(#{call_node.arglist[1].arguments.map{|str| str.value.to_s}.join ' '})"
+        imports = if obj.arglist[1]
+            " qw(#{obj.arglist[1].arguments.map{|str| str.value.to_s}.join ' '})"
           else
             ''
           end
         "use #{mod}#{imports}"
-      elsif call_node.receiver.nil? && call_node.method_name == :attr_accessor
-        "__PACKAGE__->mk_accessors(qw(#{call_node.arglist.map{|lit| 
+      elsif obj.receiver.nil? && obj.method_name == :attr_accessor
+        "__PACKAGE__->mk_accessors(qw(#{obj.arglist.map{|lit| 
           lit.value.to_s}.join(' ')}))"
-      elsif call_node.receiver.is_a?(Node::SelfNode) && 
-        call_node.parent.is_a?(Node::BlockNode) && 
-        call_node.parent.parent.is_a?(Node::ClassNode)
+      elsif obj.receiver.is_a?(Node::SelfNode) && 
+        obj.parent.is_a?(Node::BlockNode) && 
+        obj.parent.parent.is_a?(Node::ClassNode)
         # TODO
-        "__PACKAGE__->#{call_node.method_name}(#{call_node.arglist.map {|a| obj_to_perl a}.join(', ')})"
-      elsif call_node.method_name == :[]
-        receiver = obj_to_perl call_node.receiver
-        index = obj_to_perl call_node.arglist.first
+        "__PACKAGE__->#{obj.method_name}(#{obj.arglist.map {|a| obj_to_perl a}.join(', ')})"
+      elsif obj.method_name == :[]
+        receiver = obj_to_perl obj.receiver
+        index = obj_to_perl obj.arglist.first
         if receiver =~ /^@(.*)/
           "$#{$1}[#{index}]"
         elsif index =~ /^\d+$/
@@ -139,106 +161,122 @@ module Sapphire
         else
           "#{receiver}->{#{index}}"
         end
-      elsif call_node.method_name == :call # TODO: assume that the receiver is a block
-        "#{obj_to_perl call_node.receiver}->(#{call_node.arglist.map {|a| obj_to_perl a}.join(', ')})"
-      elsif call_node.receiver && call_node.method_name == :size
-        "(scalar @{#{obj_to_perl call_node.receiver}})"
-      elsif call_node.receiver && call_node.method_name == :empty?
-        "(scalar @{#{obj_to_perl call_node.receiver}} == 0)"
-      elsif call_node.receiver && call_node.method_name == :to_arrayref # TODO: remove this
-        "[#{obj_to_perl call_node.receiver}]"
-      elsif call_node.method_name == :map
-        <<-EOS.gsub(/^ /, '')
-          map {
-            #{obj_to_perl call_node.next(2)}
-          } #{obj_to_perl call_node.receiver}
-        EOS
-      elsif call_node.receiver && [:find, :select].include?(call_node.method_name)
-        "(grep { #{obj_to_perl call_node.next(2)} } @{#{obj_to_perl call_node.receiver}}) != 0"
-      elsif call_node.method_name == :is_a?
-        arg = obj_to_perl call_node.arglist.first
+      elsif obj.method_name == :call && 
+        obj.receiver && 
+        obj.receiver.is_a?(Node::LvarNode) && 
+        obj.scope.variable_definition(obj.receiver.var_name) && 
+        obj.scope.variable_definition(obj.receiver.var_name).kind == :block # TODO
+        "#{obj_to_perl obj.receiver}->(#{obj.arglist.map {|a| obj_to_perl a}.join(', ')})"
+      elsif obj.receiver && obj.method_name == :size
+        "(scalar @{#{obj_to_perl obj.receiver}})"
+      elsif obj.receiver && obj.method_name == :empty?
+        "(scalar @{#{obj_to_perl obj.receiver}} == 0)"
+      elsif obj.receiver && obj.method_name == :to_arrayref # TODO
+        "[#{obj_to_perl obj.receiver}]"
+      elsif obj.receiver && [:find, :select].include?(obj.method_name)
+        "(grep { #{obj_to_perl obj.next(2)} } @{#{obj_to_perl obj.receiver}}) != 0"
+      elsif obj.method_name == :is_a?
+        arg = obj_to_perl obj.arglist.first
         if arg == 'Array'
-          "(ref #{obj_to_perl call_node.receiver} eq 'ARRAY')"
+          "(ref #{obj_to_perl obj.receiver} eq 'ARRAY')"
         else
-          "(ref #{obj_to_perl call_node.receiver} eq '#{arg}')"
+          "(ref #{obj_to_perl obj.receiver} eq '#{arg}')"
         end
-      elsif is_unary_operator call_node.method_name
-        method = call_node.method_name.to_s.sub /@$/, ''
-        "#{method}(#{obj_to_perl call_node.receiver})"
+      elsif is_unary_operator obj.method_name
+        method = obj.method_name.to_s.sub /@$/, ''
+        "#{method}(#{obj_to_perl obj.receiver})"
       else
         block = nil
         block_args = nil
-        if call_node.parent.is_a?(Node::IterNode)
-          block = call_node.parent.body
-          block_args = call_node.next
-          if call_node.method_name == :each
+        if obj.parent.is_a?(Node::IterNode)
+          block = obj.parent.body
+          block_args = obj.next
+          if obj.method_name == :each
             var_name = block_args.arguments.first
-            my = call_node.scope.variable_defined?(var_name) ? '' : 'my '
+            my = obj.scope.variable_defined?(var_name) ? '' : 'my '
             return <<-EOS.gsub(/^ +/, '')
-              for #{my}$#{var_name} (#{obj_to_perl call_node.receiver}) {
+              for #{my}$#{var_name} (#{obj_to_perl obj.receiver}) {
                 #{obj_to_perl block}
               }
             EOS
-          elsif call_node.method_name == :lambda
-            return block_to_perl(block, block_args) + semicolon_if_needed(call_node.parent)
+          elsif obj.method_name == :map
+            receiver = obj_to_perl obj.receiver
+            if receiver =~ /^\$/
+              receiver = "@{#{receiver}}" # TODO
+            end
+            return <<-EOS.gsub(/^ +/, '').strip
+              map {
+                #{obj_to_perl block}
+              } #{receiver}
+            EOS
+
+          elsif obj.method_name == :lambda
+            return block_to_perl(block, block_args) + semicolon_if_needed(obj.parent)
           end
         end
 
-        receiver = call_node.receiver ? "#{obj_to_perl call_node.receiver}->" : ''
-        method = call_node.method_name.to_s
+        receiver = obj.receiver ? "#{obj_to_perl obj.receiver}->" : ''
+        method = obj.method_name.to_s
         if method =~ /^(.*)[!?]$/
           method = $1
         end
-        args = call_node.arglist.map {|a| obj_to_perl a}.join(', ')
+        args = obj.arglist.map {|a| obj_to_perl a}.join(', ')
         if block
           args += ', ' unless args.empty?
           args += block_to_perl block, block_args
-        elsif call_node.receiver.nil? && args.empty?
-          if call_node.scope.variable_defined? method
+        elsif obj.receiver.nil? && args.empty?
+          if obj.scope.variable_defined? method
             return "$#{method}"
           end
         end
         "#{receiver}#{method}(#{args})"
-      end + semicolon_if_needed(call_node)
+      end + semicolon_if_needed(obj)
     end
 
-    def is_unary_operator(op)
-      op.to_s =~ /^(.*)@$/ || op.to_s =~ /^(!)$/
+    def cdecl_node_to_perl(obj)
+      name = obj_to_perl obj.const_name
+      value = obj_to_perl obj.value
+      kind = obj.value.is_a?(Node::ArrayNode) ? :array : :ref
+      const_def = obj.scope.define_constant name, kind
+      "use constant #{const_def.sigil}#{name} => #{value};"
     end
 
-    def is_binary_operator(op)
-      %w(+ - * / % ** < > <= >= == != === <=> | ^ << >> && || 
-        .. and or eq ne cmp lt gt le ge).include? op.to_s
-    end
-
-    def block_to_perl(block, args)
-      asgn_args = if args && args != 0
-          args[0] = :self if args.first == :__self__ # TODO
-          args.arguments.map do |arg|
-            "my $#{arg} = shift;"
-          end.join "\n"
+    def class_node_to_perl(obj)
+      fqcn = 
+        if obj.class_name.is_a? Node::Colon3Node
+          obj_to_perl obj.class_name
+        elsif obj.class_name =~ /^::(.+)/
+          $1
         else
-          ''
+          (obj.scope.all_modules.dup + [obj.class_name]).map {|e| obj_to_perl e}.join '::'
+        end
+      super_fqcn =
+        if obj.super_class.nil?
+          nil
+        elsif obj.super_class.is_a? Node::Colon3Node
+          obj_to_perl obj.super_class
+        elsif obj.super_class =~ /^::(.+)/
+          $1
+        else
+          (obj.scope.all_modules.dup + [obj.super_class]).map {|e| obj_to_perl e}.join '::'
         end
       <<-EOS.gsub(/^ +/, '')
-        sub {
-          #{asgn_args}
-          #{obj_to_perl block}
+        {
+          package #{fqcn};#{super_fqcn ? "\nuse base '#{super_fqcn}';" : ''}
+          #{obj_to_perl obj.body}
         }
       EOS
     end
 
-    def lasgn_node_to_perl(obj)
-      semicolon = semicolon_if_needed obj
-      if obj.scope.variable_defined? obj.var_name
-        var_def = obj.scope.variable_definition obj.var_name
-        sigil = var_def.type == :array ? '@' : '$'
-        "#{sigil}#{obj.var_name} = #{obj_to_perl obj.value}#{semicolon}"
+    def const_node_to_perl(obj)
+      name = obj.const_name.to_s
+      if obj.parent.is_a?(Node::CallNode) && obj.parent.receiver != obj
+        # in arglist
+        const_def = obj.scope.constant_definition name.to_sym
+        sigil = const_def ? const_def.sigil : '$'
+        "#{sigil}#{name}"
       else
-        type = obj.value.is_a?(Node::ArrayNode) ? :array : :ref 
-        obj.scope.define_variable obj.var_name, type
-        sigil = type == :array ? '@' : '$'
-        "my #{sigil}#{obj.var_name} = #{obj_to_perl obj.value}#{semicolon}"
+        name
       end
     end
 
@@ -271,68 +309,20 @@ module Sapphire
       EOS
     end
 
-    def class_node_to_perl(obj)
-      fqcn = 
-        if obj.class_name.is_a? Node::Colon3Node
-          obj_to_perl obj.class_name
-        elsif obj.class_name =~ /^::(.+)/
-          $1
-        else
-          (obj.scope.all_modules.dup + [obj.class_name]).map {|e| obj_to_perl e}.join '::'
-        end
-      super_fqcn =
-        if obj.super_class.nil?
-          'Class::Accessor::Fast'
-        elsif obj.super_class.is_a? Node::Colon3Node
-          obj_to_perl obj.super_class
-        elsif obj.super_class =~ /^::(.+)/
-          $1
-        else
-          (obj.scope.all_modules.dup + [obj.super_class]).map {|e| obj_to_perl e}.join '::'
-        end
-      <<-EOS.gsub(/^ +/, '')
-        {
-          package #{fqcn};
-          use base '#{super_fqcn}';
-          #{obj_to_perl obj.body}
-        }
-      EOS
+    def dstr_node_to_perl(obj)
+      ([obj.str.inspect] + obj.arguments[1..-1].map{|e| obj_to_perl e}).join ' . '
     end
 
-    def const_node_to_perl(obj)
-      name = obj.const_name.to_s
-      if obj.parent.is_a?(Node::CallNode) && obj.parent.receiver != obj
-        # in arglist
-        const_def = obj.scope.constant_definition name.to_sym
-        sigil = const_def ? const_def.sigil : '$'
-        "#{sigil}#{name}"
-      else
-        name
-      end
+    def gvar_node_to_perl(obj)
+      obj.gvar_name == :$! ? '$@' : obj.gvar_name.to_s
     end
 
-    def attrasgn_node_to_perl(obj)
-      receiver = obj.receiver.var_name
-      attr = obj.method_name.to_s.sub('=', '')
-      if attr == '[]'
-        index = obj_to_perl obj.arguments[2]
-        val = obj_to_perl obj.arguments[3]
-        "$#{receiver}->{#{index}} = #{val};"
-      else
-        val = obj_to_perl obj.value
-        "$#{receiver}->#{attr}(#{val});"
-      end
-    end
-
-    def lvar_node_to_perl(obj)
-      var_def = obj.scope.variable_definition obj.var_name
-      if var_def && var_def.type == :array
-        "@#{obj.var_name}"
-      elsif var_def && var_def.type == :block
-        "$#{obj.var_name}"
-      else
-        "$#{obj.var_name}"
-      end
+    def hash_node_to_perl(obj)
+      "{#{
+        Hash[*obj.arguments].to_a.map do |k, v|
+          "#{obj_to_perl k} => #{obj_to_perl v}"
+        end.join ', '
+      }}"
     end
 
     def if_node_to_perl(obj)
@@ -355,32 +345,26 @@ module Sapphire
       end
     end
 
-    def hash_node_to_perl(obj)
-      "{#{
-        Hash[*obj.arguments].to_a.map do |k, v|
-          "#{obj_to_perl k} => #{obj_to_perl v}"
-        end.join ', '
-      }}"
-    end
-
-    def gvar_node_to_perl(obj)
-      obj.gvar_name == :$! ? '$@' : obj.gvar_name.to_s
-    end
-
-    def block_node_to_perl(obj)
-      if obj.arguments.size == 1 && obj.first.is_a?(Node::NilNode)
-        ''
+    def lasgn_node_to_perl(obj)
+      semicolon = semicolon_if_needed obj
+      sigil = obj.value.kind == :array ? '@' : '$'
+      if obj.scope.variable_defined? obj.var_name
+        "#{sigil}#{obj.var_name} = #{obj_to_perl obj.value}#{semicolon}"
       else
-        obj.arguments.map {|a| obj_to_perl a}.join("\n")
+        obj.scope.define_variable obj.var_name, obj.value.kind
+        "my #{sigil}#{obj.var_name} = #{obj_to_perl obj.value}#{semicolon}"
       end
     end
 
-    def cdecl_node_to_perl(obj)
-      name = obj_to_perl obj.const_name
-      value = obj_to_perl obj.value
-      type = obj.value.is_a?(Node::ArrayNode) ? :array : :ref
-      const_def = obj.scope.define_constant name, type
-      "use constant #{const_def.sigil}#{name} => #{value};"
+    def lvar_node_to_perl(obj)
+      var_def = obj.scope.variable_definition obj.var_name
+      if var_def && var_def.kind == :array
+        "@#{obj.var_name}"
+      elsif var_def && var_def.kind == :block
+        "$#{obj.var_name}"
+      else
+        "$#{obj.var_name}"
+      end
     end
 
     def masgn_node_to_perl(obj)
@@ -413,24 +397,15 @@ module Sapphire
       end
     end
 
-    def while_node_to_perl(obj)
+    def resbody_node_to_perl(obj)
+      rescue_var = obj.exception_name
+      exception_class = obj.exception_class
       <<-EOS.gsub /^ +/, ''
-        while (#{obj_to_perl obj.condition}) {
+        if ($@#{exception_class ? " && is_instance($@, \"#{exception_class}\")" : ''}) {#{
+          rescue_var ? "\nmy $#{rescue_var} = $@;" : ''}
           #{obj_to_perl obj.body}
         }
       EOS
-    end
-
-    def until_node_to_perl(obj)
-      <<-EOS.gsub /^ +/, ''
-        until (#{obj_to_perl obj.condition}) {
-          #{obj_to_perl obj.body}
-        }
-      EOS
-    end
-
-    def dstr_node_to_perl(obj)
-      ([obj.str.inspect] + obj.arguments[1..-1].map{|e| obj_to_perl e}).join ' . '
     end
 
     def rescue_node_to_perl(obj)
@@ -443,13 +418,50 @@ module Sapphire
       EOS
     end
 
-    def resbody_node_to_perl(obj)
-      rescue_var = obj.exception_name
-      exception_class = obj.exception_class
+    def until_node_to_perl(obj)
       <<-EOS.gsub /^ +/, ''
-        if ($@#{exception_class ? " && is_instance($@, \"#{exception_class}\")" : ''}) {#{
-          rescue_var ? "\nmy $#{rescue_var} = $@;" : ''}
+        until (#{obj_to_perl obj.condition}) {
           #{obj_to_perl obj.body}
+        }
+      EOS
+    end
+
+    def while_node_to_perl(obj)
+      <<-EOS.gsub /^ +/, ''
+        while (#{obj_to_perl obj.condition}) {
+          #{obj_to_perl obj.body}
+        }
+      EOS
+    end
+
+    def semicolon_if_needed(node)
+      node.parent.nil? || node.parent.is_a?(Node::BlockNode) || 
+        (node.parent.is_a?(Node::IterNode) && node.parent.parent.is_a?(Node::BlockNode)) ? 
+          ';' : ''
+    end
+
+    def is_unary_operator(op)
+      op.to_s =~ /^(.*)@$/ || op.to_s =~ /^(!)$/
+    end
+
+    def is_binary_operator(op)
+      %w(+ - * / % ** < > <= >= == != === <=> | ^ << >> && || 
+        .. and or eq ne cmp lt gt le ge).include? op.to_s
+    end
+
+    def block_to_perl(block, args)
+      asgn_args = if args && args != 0
+          args[0] = :self if args.first == :__self__ # TODO
+          args.arguments.map do |arg|
+            "my $#{arg} = shift;"
+          end.join "\n"
+        else
+          ''
+        end
+      <<-EOS.gsub(/^ +/, '')
+        sub {
+          #{asgn_args}
+          #{obj_to_perl block}
         }
       EOS
     end

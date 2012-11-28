@@ -13,7 +13,6 @@ class TestPerlGenerator < Test::Unit::TestCase
   def test_initialize
     generator = Sapphire::PerlGenerator.new
     assert_equal <<-EXPECTED.gsub(/^ +/, '').strip, generator.generate('1 + 1')
-      use 5.010;
       use strict;
       use warnings;
       1 + 1;
@@ -66,6 +65,63 @@ class TestPerlGenerator < Test::Unit::TestCase
     EXPECTED
       workbook = nil
       workbook[1]['A3']
+    ACTUAL
+  end
+
+  def test_generate_eq
+    assert_code 'var() eq "str";', 'var == "str"'
+    assert_code '"str" eq var();', '"str" == var'
+    assert_code 'var() == 1;', 'var == 1'
+    assert_code '1 == var();', '1 == var'
+  end
+
+  def test_generate_assign
+    assert_code <<-EXPECTED.strip, <<-ACTUAL
+      my @ary = ();
+      my @var = map {
+        do_something();
+      } @ary;
+    EXPECTED
+      ary = []
+      var = ary.map do
+        do_something
+      end
+    ACTUAL
+
+    assert_code <<-EXPECTED.strip, <<-ACTUAL
+      my $ary = undef;
+      my @var = map {
+        do_something();
+      } @{$ary};
+    EXPECTED
+      ary = nil
+      var = ary.map do
+        do_something
+      end
+    ACTUAL
+
+    assert_code <<-EXPECTED.strip, <<-ACTUAL
+      my @ary1 = ();
+      my @ary2 = @ary1;
+    EXPECTED
+      ary1 = []
+      ary2 = ary1
+    ACTUAL
+
+    assert_code <<-EXPECTED.strip, <<-ACTUAL
+      my @ary1 = ();
+      my $ary2 = [@ary1];
+    EXPECTED
+      ary1 = []
+      ary2 = ary1.to_arrayref
+    ACTUAL
+
+    assert_code <<-EXPECTED.strip, <<-ACTUAL
+      my @ary1 = ();
+      my $ary2 = scalar(@ary1);
+    EXPECTED
+      ary1 = []
+      ary2 = scalar ary1
     ACTUAL
   end
 
@@ -196,7 +252,7 @@ class TestPerlGenerator < Test::Unit::TestCase
       };
       if ($@) {
         my $e = $@;
-        say($e);
+        print($e . "\\n");
       }
 
     EXPECTED
@@ -212,7 +268,7 @@ class TestPerlGenerator < Test::Unit::TestCase
         1 / 0
       };
       if ($@ && is_instance($@, "ZeroDivisionError")) {
-        say("error");
+        print("error" . "\\n");
       }
 
     EXPECTED
@@ -229,7 +285,7 @@ class TestPerlGenerator < Test::Unit::TestCase
       };
       if ($@ && is_instance($@, "ZeroDivisionError")) {
         my $e = $@;
-        say($e);
+        print($e . "\\n");
       }
 
     EXPECTED
@@ -245,10 +301,10 @@ class TestPerlGenerator < Test::Unit::TestCase
         1 / 0
       };
       if ($@ && is_instance($@, "ZeroDivisionError")) {
-        say("zero division");
+        print("zero division" . "\\n");
       }
       else if ($@ && is_instance($@, "Exception")) {
-        say("exception");
+        print("exception" . "\\n");
       }
 
     EXPECTED
@@ -409,8 +465,8 @@ class TestPerlGenerator < Test::Unit::TestCase
       sub foo {
         my $bar = shift;
         my $buzz = shift;
-        say($bar);
-        say($buzz);
+        print($bar . "\\n");
+        print($buzz . "\\n");
       }
     EXPECTED
       def foo(bar, buzz)
@@ -434,8 +490,8 @@ class TestPerlGenerator < Test::Unit::TestCase
       sub foo {
         my $bar = shift;
         my @buzz = @_;
-        say($bar);
-        say($buzz[0]);
+        print($bar . "\\n");
+        print($buzz[0] . "\\n");
       }
     EXPECTED
       def foo(bar, *buzz)
@@ -500,12 +556,13 @@ class TestPerlGenerator < Test::Unit::TestCase
       outer inner(arg1, arg2)
     ACTUAL
 
-    # TODO
     assert_code <<-EXPECTED, <<-ACTUAL
-      for my $e (ary()) {
-        say($e);
+      my @ary = ();
+      for my $e (@ary) {
+        print($e . "\\n");
       }
     EXPECTED
+      ary = []
       ary.each do |e|
         puts e
       end
@@ -612,7 +669,6 @@ class TestPerlGenerator < Test::Unit::TestCase
     assert_code <<-EXPECTED, <<-ACTUAL
       {
         package Abc::Gef::A;
-        use base 'Class::Accessor::Fast';
 
       }
     EXPECTED
@@ -627,7 +683,6 @@ class TestPerlGenerator < Test::Unit::TestCase
     assert_code <<-EXPECTED, <<-ACTUAL
       {
         package Abc::Def::Jkl::Mno::B;
-        use base 'Class::Accessor::Fast';
 
       }
     EXPECTED
@@ -644,7 +699,6 @@ class TestPerlGenerator < Test::Unit::TestCase
     assert_code <<-EXPECTED, <<-ACTUAL
       {
         package Buzz::Xyzzy::Abc::Foo;
-        use base 'Class::Accessor::Fast';
 
       }
     EXPECTED
