@@ -57,7 +57,6 @@ Sapphire is a ruby to perl compiler. Note that the purpose of Sapphire for now i
 
 * ruby_parser
 * Perl::Tidy (to prettify the result)
-* Class::Accessor::Fast (to execute a generated perl code)
 
 == INSTALL:
 

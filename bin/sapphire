@@ -1,4 +1,5 @@
 #!/usr/bin/env ruby
+require 'fileutils'
 require 'optparse'
 require 'sapphire'
 
@@ -10,6 +11,7 @@ Usage: sapphire [options]
 EOS
 OPTS = {:prettify => true}
 opt.on('-o FILENAME', 'specify the filename for output') {|v| OPTS[:output] = v}
+opt.on('-O DIRNAME', 'specify the dirname for output') {|v| OPTS[:outdir] = v}
 opt.on('-p [YES|no]', 'specify whether prettify the output or not') {|v| OPTS[:prettify] = v.to_s.downcase != 'no'}
 opt.on('-t [PERL|s]', 'specify the output filetype') {|v| OPTS[:ruby_parse] = v}
 opt.on('-e COMMAND', 'one line of script') {|v| (OPTS[:command] ||= []) << v}
@@ -22,29 +24,42 @@ if OPTS[:ruby_parse] == 's'
     Sapphire.convert_file(ARGF, 's')
   end
 else
-  type = OPTS[:ruby_parse] 
-  type = nil if type and ['p', 'pl', 'perl'].include? type.downcase
-  perl = OPTS[:command] ? Sapphire.convert_string(OPTS[:command].join("\n"), type) : Sapphire.convert_file(ARGF, type)
+#  if 1 < ARGV.size && OPTS[:output]
+#    puts 'You cannot use the output (-o) parameter for more than one target files.'
+#    exit
+#  end
 
-  if OPTS[:prettify] && `which perltidy`.empty?
-    OPTS[:prettify] = false
-    STDERR.puts "# Please install perltidy to prettify the generated code: `sudo cpan -i Perl::Tidy'"
-  end
+  ARGV.each do |filename|
+    type = OPTS[:ruby_parse] 
+    type = nil if type and ['p', 'pl', 'perl'].include? type.downcase
+    perl = OPTS[:command] ? Sapphire.convert_string(OPTS[:command].join("\n"), type) : Sapphire.convert_file(File.new(filename), type)
 
-  if OPTS[:prettify]
-    require 'tempfile'
-    Tempfile.open 'sapphire' do |tmp|
-      tmp.write perl
-      tmp.flush
-      perl = `perltidy -st #{tmp.path}`
+    if OPTS[:prettify] && `which perltidy`.empty?
+      OPTS[:prettify] = false
+      STDERR.puts "# Please install perltidy to prettify the generated code: `sudo cpan -i Perl::Tidy'"
     end
-  end
 
-  if OPTS[:output]
-    File.open(OPTS[:output], 'w') do |file|
-      file.puts perl
+    if OPTS[:prettify]
+      require 'tempfile'
+      Tempfile.open 'sapphire' do |tmp|
+        tmp.write perl
+        tmp.flush
+        perl = `perltidy -st #{tmp.path}`
+      end
     end
-  else
-    puts perl
+
+    if OPTS[:output]
+      File.open(OPTS[:output], 1 < ARGV.size ? 'a' : 'w') do |file|
+        file.puts perl
+      end
+    elsif OPTS[:outdir]
+      new_filename = File.join OPTS[:outdir], filename.sub(%r|#{File.extname(filename)}$|, '.pm')
+      FileUtils.mkdir_p File.dirname(new_filename)
+      File.open(new_filename, 'w') do |file|
+        file.puts perl
+      end
+    else
+      puts perl
+    end
   end
 end
