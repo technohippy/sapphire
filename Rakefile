@@ -11,11 +11,11 @@ require 'hoe'
 # Hoe.plugin :rubyforge
 
 Hoe.spec 'sapphire' do
-  name = 'sapphire'
-  readme_file = 'README.rdoc'
+  self.name = 'sapphire'
+  self.readme_file = 'README.rdoc'
 
-  developer 'ANDO Yasushi', 'andyjpn@gmail.com'
-  license 'MIT'
+  self.developer 'ANDO Yasushi', 'andyjpn@gmail.com'
+  self.license 'MIT'
 end
 
 # vim: syntax=ruby
