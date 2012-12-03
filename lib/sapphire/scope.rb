@@ -74,7 +74,7 @@ module Sapphire
     end
 
     def constant_definition(constant_name)
-      nil
+      NullVariableDef.new
     end
 
     def variable_defined?(variable_name)
@@ -82,7 +82,7 @@ module Sapphire
     end
 
     def variable_definition(variable_name)
-      nil
+      NullVariableDef.new
     end
 
     def method_defined?(method_name)

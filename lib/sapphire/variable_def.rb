@@ -10,7 +10,21 @@ module Sapphire
     end
 
     def sigil
-      @kind == :array ? '@' : '$'
+      case @kind
+      when :array; '@'
+      when :hash;  '%'
+      when :block; '&'
+      else;        '$'
+      end
+    end
+  end
+
+  class NullVariableDef < VariableDef
+    def initialize
+    end
+
+    def sigil
+      '$'
     end
   end
 end

@@ -165,6 +165,22 @@ module Sapphire
       args_reader :const_name
     end
 
+    class CvarNode < Base
+      args_reader :cvar_name
+
+      def cvar_name
+        self.first[2..-1]
+      end
+    end
+
+    class CvdeclNode < Base
+      args_reader :cvar_name, :value
+
+      def cvar_name
+        self.first[2..-1]
+      end
+    end
+
     class DefnNode < ScopedBase
       args_reader :method_name, :method_args
       body_reader 2..-1

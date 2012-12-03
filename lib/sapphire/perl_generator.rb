@@ -38,6 +38,10 @@ module Sapphire
         "#{obj_to_perl obj.head}::#{obj_to_perl obj.tail}"
       when Node::Colon3Node
         obj_to_perl obj.tail
+      when Node::CvarNode
+        cvar_node_to_perl obj
+      when Node::CvdeclNode
+        cvdecl_node_to_perl obj
       when Node::DefnNode
         defn_node_to_perl obj
       when Node::DstrNode
@@ -278,6 +282,19 @@ module Sapphire
       else
         name
       end
+    end
+
+    def cvar_node_to_perl(obj)
+      var_def = obj.scope.variable_definition obj.cvar_name
+      "#{var_def.sigil}#{obj.cvar_name}"
+    end
+
+    def cvdecl_node_to_perl(obj)
+      name = obj.cvar_name
+      value = obj_to_perl obj.value
+      sigil = obj.value.is_a?(Node::ArrayNode) ? '@' : 
+        obj.value.is_a?(Node::HashNode) ? '%' : '$'
+      "our #{sigil}#{name} = #{value};"
     end
 
     def defn_node_to_perl(obj)
