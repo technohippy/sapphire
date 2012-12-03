@@ -12,7 +12,7 @@ require 'hoe'
 
 Hoe.spec 'sapphire' do
   name = 'sapphire'
-  readme_file = 'README.txt'
+  readme_file = 'README.rdoc'
 
   developer 'ANDO Yasushi', 'andyjpn@gmail.com'
   license 'MIT'
