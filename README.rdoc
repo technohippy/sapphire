@@ -14,7 +14,7 @@ Sapphire is a ruby to perl compiler. Note that the purpose of Sapphire for now i
 
 === See code
 
-  $ cat example/write_file.rb 
+  $ cat example/write_file.rb
   # http://learn.perl.org/examples/read_write_file.html
   require 'path/class'
   require 'autodie'
@@ -29,7 +29,7 @@ Sapphire is a ruby to perl compiler. Note that the purpose of Sapphire for now i
 
 === Convert
 
-  $ ruby -Ilib -Iext/ruby_parser/ bin/sapphire example/write_file.rb 
+  $ ruby -Ilib -Iext/ruby_parser/lib bin/sapphire example/write_file.rb
   use strict;
   use warnings;
   use Path::Class;
