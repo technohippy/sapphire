@@ -11,15 +11,11 @@ require 'hoe'
 # Hoe.plugin :rubyforge
 
 Hoe.spec 'sapphire' do
-  # HEY! If you fill these out in ~/.hoe_template/Rakefile.erb then
-  # you'll never have to touch them again!
-  # (delete this comment too, of course)
+  self.name = 'sapphire'
+  self.readme_file = 'README.rdoc'
 
-  # developer('FIX', 'FIX@example.com')
-
-  # self.rubyforge_name = 'sapphirex' # if different than 'sapphire'
-
-  # license 'MIT' # this should match the license in the README
+  self.developer 'ANDO Yasushi', 'andyjpn@gmail.com'
+  self.license 'MIT'
 end
 
 # vim: syntax=ruby
