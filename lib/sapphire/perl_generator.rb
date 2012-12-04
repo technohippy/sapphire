@@ -485,7 +485,7 @@ module Sapphire
       if receiver =~ /^@/
         "#{receiver.sub /^@/, '$'}[#{arg}] #{obj.op}= #{value}#{semicolon_if_needed obj}"
       else
-        "#{receiver}->{#{arg}} #{obj.op}= #{value}#{semicolon_if_needed obj}"
+        "#{receiver.sub /^%/, '$'}->{#{arg}} #{obj.op}= #{value}#{semicolon_if_needed obj}"
       end
     end
 

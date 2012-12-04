@@ -140,6 +140,14 @@ class TestPerlGenerator < Test::Unit::TestCase
     ACTUAL
 
     assert_code <<-EXPECTED.strip, <<-ACTUAL
+      my %ary = {};
+      $ary->{0} ||= {};
+    EXPECTED
+      ary = {}
+      ary[0] ||= {}
+    ACTUAL
+
+    assert_code <<-EXPECTED.strip, <<-ACTUAL
       my $val = undef;
       $val ||= {};
     EXPECTED
