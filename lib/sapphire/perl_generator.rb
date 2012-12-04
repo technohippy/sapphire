@@ -44,6 +44,8 @@ module Sapphire
         cvdecl_node_to_perl obj
       when Node::DefnNode
         defn_node_to_perl obj
+      when Node::Dot2Node
+        "(#{obj_to_perl obj.min}..#{obj_to_perl obj.max})"
       when Node::DstrNode
         dstr_node_to_perl obj
       when Node::EvstrNode
@@ -70,6 +72,10 @@ module Sapphire
         obj_to_perl obj.body
       when Node::NotNode
         "not #{obj_to_perl obj.first}"
+      when Node::OpAsgn1Node
+        op_asgn1_node_to_perl obj
+      when Node::OpAsgnOrNode
+        op_asgn_or_node_to_perl obj
       when Node::OrNode
         "#{obj_to_perl obj.left} or #{obj_to_perl obj.right}"
       when Node::ResbodyNode
@@ -172,7 +178,7 @@ module Sapphire
         index = obj_to_perl obj.arglist.first
         if receiver =~ /^@(.*)/
           "$#{$1}[#{index}]"
-        elsif index =~ /^\d+$/
+        elsif index =~ /^-?\d+$/
           "#{receiver}->[#{index}]"
         else
           "#{receiver}->{#{index}}"
@@ -205,6 +211,10 @@ module Sapphire
         receiver = obj_to_perl obj.receiver
         receiver = "@{#{receiver}}" unless receiver =~ /^@/
         "shift(#{receiver})"
+      elsif obj.receiver && obj.method_name == :split
+        receiver = obj_to_perl obj.receiver
+        arg = obj_to_perl obj.arglist.first
+        "split(#{receiver}, #{arg})"
       elsif obj.receiver && obj.method_name == :to_ref # TODO
         "${#{obj_to_perl obj.receiver}}"
       elsif obj.receiver && obj.method_name == :to_arrayref # TODO
@@ -466,6 +476,23 @@ module Sapphire
       else
         raise "must be a splat node or an array node: #{obj.values.class.name}"
       end
+    end
+
+    def op_asgn1_node_to_perl(obj)
+      receiver = obj_to_perl obj.receiver
+      arg = obj_to_perl obj.arglist.first
+      value = obj_to_perl obj.value
+      if receiver =~ /^@/
+        "#{receiver.sub /^@/, '$'}[#{arg}] #{obj.op}= #{value}#{semicolon_if_needed obj}"
+      else
+        "#{receiver}->{#{arg}} #{obj.op}= #{value}#{semicolon_if_needed obj}"
+      end
+    end
+
+    def op_asgn_or_node_to_perl(obj)
+      receiver = obj_to_perl obj.receiver
+      value = obj_to_perl obj.value
+      "#{receiver} ||= #{value}#{semicolon_if_needed obj}"
     end
 
     def resbody_node_to_perl(obj)

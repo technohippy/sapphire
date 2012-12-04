@@ -109,6 +109,9 @@ module Sapphire
       args_reader :left, :right
     end
 
+    class ArglistNode < Base
+    end
+
     class ArgsNode < Base
     end
 
@@ -140,9 +143,9 @@ module Sapphire
       def kind
         @kind ||= 
           case self.method_name
-          when :map;     :array
-          when :to_hash; :hash
-          else           super
+          when :map, :split; :array
+          when :to_hash;     :hash
+          else               super
           end
       end
     end
@@ -217,6 +220,10 @@ module Sapphire
       def _setup
         @scope.define_method method_name
       end
+    end
+
+    class Dot2Node < Base
+      args_reader :min, :max
     end
 
     class DstrNode < Base
@@ -307,6 +314,18 @@ module Sapphire
     class NthRefNode < KeywordBase
       def keyword
         "$#{self.first}"
+      end
+    end
+
+    class OpAsgn1Node < Base
+      args_reader :receiver, :arglist, :op, :value 
+    end
+
+    class OpAsgnOrNode < Base
+      args_reader :receiver, :lasgn
+      
+      def value
+        self.lasgn.value
       end
     end
 
