@@ -1,12 +1,12 @@
 require 'ruby_parser'
 require 'sapphire/node'
-require 'pp'
+require 'sapphire/scope'
 
 module Sapphire
   class Parser
     def parse(string)
       root_node = instance_eval RubyParser.new.parse(string).inspect
-      root_node.setup
+      root_node.setup Scope::Global
     end
 
     private

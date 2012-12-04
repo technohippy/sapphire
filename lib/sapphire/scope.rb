@@ -4,6 +4,8 @@ module Sapphire
   class Scope
     attr_accessor :module
 
+    Global = self.new
+
     def initialize(parent=NilScope.new)
       @parent = parent
       @constant_names = []
@@ -57,6 +59,48 @@ module Sapphire
 
     def method_defined?(method_name)
       @method_names.include?(method_name.to_sym) || @parent.method_defined?(method_name)
+    end
+  end
+
+  class CombinedScope < Scope
+    def initialize(primary, secondary)
+      @primary = primary
+      @secondary = secondary
+    end
+
+    def all_modules
+      # TODO
+      @primary.all_modules + @secondary.all_modules
+    end
+
+    def constant_defined?(variable_name)
+      @primary.constant_defined?(variable_name) || @secondary.constant_defined?(variable_name)
+    end
+
+    def constant_definition(constant_name)
+      const_def = @primary.constant_definition constant_name
+      if const_def.nil?
+        @secondary.constant_definition constant_name
+      else
+        const_def
+      end
+    end
+
+    def variable_defined?(variable_name)
+      @primary.variable_defined?(variable_name) || @secondary.variable_defined?(variable_name)
+    end
+
+    def variable_definition(variable_name)
+      var_def = @primary.variable_definition variable_name
+      if var_def.nil?
+        @secondary.variable_definition variable_name
+      else
+        var_def
+      end
+    end
+
+    def method_defined?(method_name)
+      @primary.method_defined?(method_name) || @secondary.method_defined?(method_name)
     end
   end
 

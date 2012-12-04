@@ -25,6 +25,15 @@ module Sapphire
         EOS
       end
 
+      def self.set_kind(kind)
+        self.class_eval <<-EOS
+          def kind
+            @kind ||= #{kind.inspect}
+          end
+        EOS
+      end
+
+
       def initialize(*arguments)
         (@arguments = arguments).each {|arg| arg.parent = self if arg.is_a? Base}
       end
@@ -104,9 +113,7 @@ module Sapphire
     end
 
     class ArrayNode < Base
-      def kind
-        :array
-      end
+      set_kind :array
     end
 
     class AttrasgnNode < Base
@@ -131,11 +138,12 @@ module Sapphire
       end
 
       def kind
-        if self.method_name == :map
-          :array
-        else
-          super
-        end
+        @kind ||= 
+          case self.method_name
+          when :map;     :array
+          when :to_hash; :hash
+          else           super
+          end
       end
     end
 
@@ -150,6 +158,16 @@ module Sapphire
     class ClassNode < Base
       args_reader :class_name, :super_class
       body_reader 2..-1
+
+      def setup(scope=Scope.new)
+        super_class_scope = Scope.new # TODO
+        @scope = CombinedScope.new super_class_scope, scope
+        @arguments.each do |arg|
+          arg.setup scope if arg.is_a? Base
+        end
+        _setup
+        self
+      end
     end
 
     class Colon2Node < Base
@@ -166,19 +184,30 @@ module Sapphire
     end
 
     class CvarNode < Base
-      args_reader :cvar_name
+      args_reader :name
 
       def cvar_name
-        self.first[2..-1]
+        self.first.to_s[2..-1].to_sym
       end
+      alias var_name cvar_name
+    end
+
+    class CvasgnNode < Base
+      args_reader :name
+
+      def cvar_name
+        self.first.to_s[2..-1].to_sym
+      end
+      alias var_name cvar_name
     end
 
     class CvdeclNode < Base
-      args_reader :cvar_name, :value
+      args_reader :name, :value
 
       def cvar_name
-        self.first[2..-1]
+        self.first.to_s[2..-1].to_sym
       end
+      alias var_name cvar_name
     end
 
     class DefnNode < ScopedBase
@@ -207,6 +236,7 @@ module Sapphire
     end
 
     class HashNode < Base
+      set_kind :hash
     end
 
     class IfNode < ScopedBase
@@ -217,12 +247,12 @@ module Sapphire
       body_reader 2..-1
 
       def kind
-        if self.first.is_a?(CallNode) && self.first.method_name == :map
-          :array
-        else
-          super
-        end
+        @kind ||= (self.first.is_a?(CallNode) && self.first.method_name == :map ? :array : super)
       end
+    end
+
+    class IvarNode < Base
+      args_reader :ivar_name
     end
 
     class LasgnNode < Base
@@ -237,11 +267,11 @@ module Sapphire
       args_reader :var_name
 
       def kind
-        var_def = self.scope.variable_definition self.var_name
-        if var_def
-          var_def.kind
+        if @kind
+          @kind
         else
-          super
+          var_def = self.scope.variable_definition self.var_name
+          @kind = var_def ? var_def.kind : super
         end
       end
     end
@@ -351,6 +381,10 @@ module Sapphire
     class WhileNode < ScopedBase
       args_reader :condition
       body_reader 1..-2
+    end
+
+    class XstrNode < Base
+      args_reader :value
     end
   end
 end

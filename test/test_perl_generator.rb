@@ -66,6 +66,13 @@ class TestPerlGenerator < Test::Unit::TestCase
       workbook = nil
       workbook[1]['A3']
     ACTUAL
+    assert_code <<-EXPECTED.strip, <<-ACTUAL
+      my %hash = {};
+      func(%hash);
+    EXPECTED
+      hash = {}
+      func hash
+    ACTUAL
   end
 
   def test_generate_eq
@@ -627,6 +634,20 @@ class TestPerlGenerator < Test::Unit::TestCase
     ACTUAL
   end
 
+  def test_generate_funcall_special
+    assert_code <<-EXPECTED.strip, <<-ACTUAL
+      my @var = ();
+      my $other = undef;
+      push(@var, @{$other});
+    EXPECTED
+      var = []
+      other = nil
+      var.push other
+    ACTUAL
+
+    assert_code '__PACKAGE__->hello();', 'self.class.hello'
+  end
+
   def test_generate_class
     assert_code <<-EXPECTED, <<-ACTUAL
       {
@@ -660,6 +681,25 @@ class TestPerlGenerator < Test::Unit::TestCase
       class Foo < Bar
         self.call_class_method
         def buzz
+        end
+      end
+    ACTUAL
+
+    assert_code <<-EXPECTED, <<-ACTUAL
+      {
+        package Foo;
+        use base 'Bar';
+        __PACKAGE__->call_class_method();
+        sub buzz {
+
+
+        }
+
+      }
+    EXPECTED
+      class Foo < Bar
+        self.call_class_method
+        def buzz(__no_self__)
         end
       end
     ACTUAL
@@ -763,6 +803,25 @@ class TestPerlGenerator < Test::Unit::TestCase
             print "$i\\n";
           }
         }
+      end
+    ACTUAL
+
+    assert_code <<-EXPECTED, <<-ACTUAL
+      sub func {
+        my $i = shift;
+        for ($i = 0; $i <= 9; $i++) {
+          print "$i\n";
+        }
+        print("hello" . "\\n");
+      }
+    EXPECTED
+      def func(i)
+        %x{
+          for ($i = 0; $i <= 9; $i++) {
+            print "$i\\n";
+          }
+        }
+        puts 'hello'
       end
     ACTUAL
   end

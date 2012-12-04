@@ -26,5 +26,9 @@ module Sapphire
     def sigil
       '$'
     end
+
+    def is_nil?
+      true
+    end
   end
 end
