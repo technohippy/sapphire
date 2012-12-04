@@ -18,7 +18,7 @@ module Sapphire
       def self.body_reader(range=1..-1)
         self.class_eval <<-EOS
           def body
-            body = BlockNode.new *@arguments[#{range.inspect}]
+            body = BlockNode.new(*@arguments[#{range.inspect}])
             body.parent = self
             body
           end
@@ -35,6 +35,7 @@ module Sapphire
 
 
       def initialize(*arguments)
+        @kind = nil
         (@arguments = arguments).each {|arg| arg.parent = self if arg.is_a? Base}
       end
 
