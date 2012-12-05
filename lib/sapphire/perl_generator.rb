@@ -233,7 +233,7 @@ module Sapphire
           "(ref #{obj_to_perl obj.receiver} eq '#{arg}')"
         end
       elsif unary_operator? obj.method_name
-        method = obj.method_name.to_s.sub /@$/, ''
+        method = obj.method_name.to_s.sub(/@$/, '')
         "#{method}(#{obj_to_perl obj.receiver})"
       else
         block = nil
@@ -427,7 +427,7 @@ module Sapphire
           }
         ENG
       else
-        <<-EOS.gsub /^ +/, ''
+        <<-EOS.gsub(/^ +/, '')
           unless (#{obj_to_perl obj.condition}) {
             #{obj_to_perl obj.ng_body}
           }
@@ -523,7 +523,7 @@ module Sapphire
     def resbody_node_to_perl(obj)
       rescue_var = obj.exception_name
       exception_class = obj.exception_class
-      <<-EOS.gsub /^ +/, ''
+      <<-EOS.gsub(/^ +/, '')
         if ($@#{exception_class ? " && is_instance($@, \"#{exception_class}\")" : ''}) {#{
           rescue_var ? "\nmy $#{rescue_var} = $@;" : ''}
           #{obj_to_perl obj.body}
@@ -533,7 +533,7 @@ module Sapphire
 
     def rescue_node_to_perl(obj)
       rescue_bodies = obj.rescue_bodies.map{|e| obj_to_perl e}.join 'else '
-      <<-EOS.gsub /^ +/, ''
+      <<-EOS.gsub(/^ +/, '')
         eval {
           #{obj_to_perl obj.body}
         };
@@ -542,7 +542,7 @@ module Sapphire
     end
 
     def until_node_to_perl(obj)
-      <<-EOS.gsub /^ +/, ''
+      <<-EOS.gsub(/^ +/, '')
         until (#{obj_to_perl obj.condition}) {
           #{obj_to_perl obj.body}
         }
@@ -550,7 +550,7 @@ module Sapphire
     end
 
     def while_node_to_perl(obj)
-      <<-EOS.gsub /^ +/, ''
+      <<-EOS.gsub(/^ +/, '')
         while (#{obj_to_perl obj.condition}) {
           #{obj_to_perl obj.body}
         }
