@@ -130,7 +130,7 @@ module Sapphire
     end
 
     class BreakNode < KeywordBase
-      set_keyword 'break;'
+      set_keyword 'last;'
     end
 
     class CallNode < Base
@@ -196,7 +196,7 @@ module Sapphire
     end
 
     class CvasgnNode < Base
-      args_reader :name
+      args_reader :name, :value
 
       def cvar_name
         self.first.to_s[2..-1].to_sym
@@ -331,6 +331,9 @@ module Sapphire
 
     class OrNode < Base
       args_reader :left, :right
+    end
+
+    class PostexeNode < Base
     end
 
     class ReturnNode < Base

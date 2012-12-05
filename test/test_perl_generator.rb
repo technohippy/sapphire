@@ -391,7 +391,7 @@ class TestPerlGenerator < Test::Unit::TestCase
         do_something();
         $count = $count + 1;
         if (5 < $count) {
-          break;
+          last;
         }
 
       }
@@ -725,6 +725,18 @@ class TestPerlGenerator < Test::Unit::TestCase
         self.call_class_method
         def buzz(__no_self__)
         end
+      end
+    ACTUAL
+
+    assert_code <<-EXPECTED, <<-ACTUAL
+      {
+        package Foo;
+        use base 'Bar';
+        __PACKAGE__->call_class_method()->call_class_method();
+      }
+    EXPECTED
+      class Foo < Bar
+        self.call_class_method.call_class_method
       end
     ACTUAL
   end

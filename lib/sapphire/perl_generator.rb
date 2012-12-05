@@ -40,6 +40,8 @@ module Sapphire
         obj_to_perl obj.tail
       when Node::CvarNode
         cvar_node_to_perl obj
+      when Node::CvasgnNode
+        cvasgn_node_to_perl obj
       when Node::CvdeclNode
         cvdecl_node_to_perl obj
       when Node::DefnNode
@@ -77,7 +79,10 @@ module Sapphire
       when Node::OpAsgnOrNode
         op_asgn_or_node_to_perl obj
       when Node::OrNode
-        "#{obj_to_perl obj.left} or #{obj_to_perl obj.right}"
+        #"#{obj_to_perl obj.left} or #{obj_to_perl obj.right}"
+        "#{obj_to_perl obj.left} || #{obj_to_perl obj.right}"
+      when Node::PostexeNode
+        postexe_node_to_obj obj
       when Node::ResbodyNode
         resbody_node_to_perl obj
       when Node::RescueNode
@@ -137,7 +142,7 @@ module Sapphire
 
     # TODO: need refactoring
     def call_node_to_perl(obj)
-      if obj.receiver && self.is_binary_operator(obj.method_name)
+      if obj.receiver && self.binary_operator?(obj.method_name)
         receiver = obj_to_perl obj.receiver
         arg = obj_to_perl obj.arglist.first
         method_name = 
@@ -165,14 +170,11 @@ module Sapphire
       elsif obj.receiver.nil? && obj.method_name == :attr_accessor
         "__PACKAGE__->mk_accessors(qw(#{obj.arglist.map{|lit| 
           lit.value.to_s}.join(' ')}))"
-      elsif obj.receiver.is_a?(Node::SelfNode) && 
-        obj.parent.is_a?(Node::BlockNode) && 
-        obj.parent.parent.is_a?(Node::ClassNode)
-        # TODO
-        "__PACKAGE__->#{obj.method_name}(#{obj.arglist.map {|a| obj_to_perl a}.join(', ')})"
       elsif obj.receiver.is_a?(Node::SelfNode) &&
         obj.method_name == :class
         "__PACKAGE__"
+      elsif obj.receiver.is_a?(Node::SelfNode) && in_class_context?(obj)
+        "__PACKAGE__->#{obj.method_name}(#{obj.arglist.map {|a| obj_to_perl a}.join(', ')})"
       elsif obj.method_name == :[]
         receiver = obj_to_perl obj.receiver
         index = obj_to_perl obj.arglist.first
@@ -230,7 +232,7 @@ module Sapphire
         else
           "(ref #{obj_to_perl obj.receiver} eq '#{arg}')"
         end
-      elsif is_unary_operator obj.method_name
+      elsif unary_operator? obj.method_name
         method = obj.method_name.to_s.sub /@$/, ''
         "#{method}(#{obj_to_perl obj.receiver})"
       else
@@ -339,12 +341,26 @@ module Sapphire
       "#{var_def.sigil}#{obj.cvar_name}"
     end
 
+    def cvasgn_node_to_perl(obj)
+      # TODO
+      #lasgn_node_to_perl obj
+      semicolon = semicolon_if_needed obj
+      sigil = obj.value.kind == :array ? '@' : obj.value.kind == :hash ? '%' : '$'
+      if obj.scope.variable_defined? obj.name
+        "#{sigil}#{obj.var_name} = #{obj_to_perl obj.value}#{semicolon}"
+      else
+        obj.scope.define_variable obj.var_name, obj.value.kind
+        "my #{sigil}#{obj.var_name} = #{obj_to_perl obj.value}#{semicolon}"
+      end
+    end
+
     def cvdecl_node_to_perl(obj)
+      # TODO
+      #lasgn_node_to_perl obj
       obj.scope.define_variable obj.name, obj.value.kind
       name = obj.cvar_name
       value = obj_to_perl obj.value
-      sigil = obj.value.is_a?(Node::ArrayNode) ? '@' : 
-        obj.value.is_a?(Node::HashNode) ? '%' : '$'
+      sigil = obj.value.kind == :array ? '@' : obj.value.kind == :hash ? '%' : '$'
       "our #{sigil}#{name} = #{value};"
     end
 
@@ -495,6 +511,15 @@ module Sapphire
       "#{receiver} ||= #{value}#{semicolon_if_needed obj}"
     end
 
+    def postexe_node_to_obj(obj)
+      body = obj.parent.body
+      <<-EOS.gsub /^ +/, ''
+        END {
+          #{obj_to_perl body}
+        }
+      EOS
+    end
+
     def resbody_node_to_perl(obj)
       rescue_var = obj.exception_name
       exception_class = obj.exception_class
@@ -538,11 +563,11 @@ module Sapphire
           ';' : ''
     end
 
-    def is_unary_operator(op)
+    def unary_operator?(op)
       %w(+@ -@ !).include? op.to_s
     end
 
-    def is_binary_operator(op)
+    def binary_operator?(op)
       %w(+ - * / % ** < > <= >= == != === <=> | ^ << >> && || 
         .. and or eq ne cmp lt gt le ge).include? op.to_s
     end
@@ -562,6 +587,15 @@ module Sapphire
           #{obj_to_perl block}
         }
       EOS
+    end
+
+    def in_class_context?(obj)
+      while obj = obj.parent
+        if obj.is_a? Node::DefnNode
+          return false
+        end
+      end
+      true
     end
   end
 end
