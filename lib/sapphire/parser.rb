@@ -16,7 +16,7 @@ module Sapphire
     end
 
     def to_node(type, *args)
-      eval("::Sapphire::Node::#{camelize type.to_s}Node").new *args
+      eval("::Sapphire::Node::#{camelize type.to_s}Node").new(*args)
     end
     alias s to_node
   end
