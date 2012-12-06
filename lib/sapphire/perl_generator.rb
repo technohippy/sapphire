@@ -119,13 +119,22 @@ module Sapphire
         if obj.receiver.is_a?(Node::LitNode) && obj.receiver.value.is_a?(Symbol)
           obj.receiver.value.to_s
         else
-          "$#{obj.receiver.var_name}"
+          obj_to_perl obj.receiver
         end
       attr = obj.method_name.to_s.sub('=', '')
       if attr == '[]'
         index = obj_to_perl obj.arguments[2]
         val = obj_to_perl obj.arguments[3]
-        "#{receiver}->{#{index}} = #{val};"
+        # TODO: same as :[] in call_node
+        if receiver =~ /^@(.*)/
+          "$#{$1}[#{index}] = #{val};"
+        elsif receiver =~ /^%(.*)/
+          "$#{$1}{#{index}} = #{val};"
+        elsif index =~ /^-?\d+$/
+          "#{receiver}->[#{index}] = #{val};"
+        else
+          "#{receiver}->{#{index}} = #{val};"
+        end
       else
         val = obj_to_perl obj.value
         "#{receiver}->#{attr}(#{val});"
@@ -180,6 +189,8 @@ module Sapphire
         index = obj_to_perl obj.arglist.first
         if receiver =~ /^@(.*)/
           "$#{$1}[#{index}]"
+        elsif receiver =~ /^%(.*)/
+          "$#{$1}{#{index}}"
         elsif index =~ /^-?\d+$/
           "#{receiver}->[#{index}]"
         else
@@ -217,8 +228,10 @@ module Sapphire
         receiver = obj_to_perl obj.receiver
         arg = obj_to_perl obj.arglist.first
         "split(#{receiver}, #{arg})"
-      elsif obj.receiver && obj.method_name == :to_ref # TODO
+      elsif obj.receiver && obj.method_name == :to_deref # TODO
         "${#{obj_to_perl obj.receiver}}"
+      elsif obj.receiver && obj.method_name == :to_ref # TODO
+        "\\{#{obj_to_perl obj.receiver}}"
       elsif obj.receiver && obj.method_name == :to_arrayref # TODO
         "[#{obj_to_perl obj.receiver}]"
       elsif obj.receiver && obj.method_name == :to_hash # TODO
@@ -226,8 +239,9 @@ module Sapphire
       elsif obj.receiver && [:find, :select].include?(obj.method_name)
         "(grep { #{obj_to_perl obj.next(2)} } @{#{obj_to_perl obj.receiver}}) != 0"
       elsif obj.method_name == :is_a?
-        arg = obj_to_perl obj.arglist.first
-        if arg == 'Array'
+        target = obj.arglist.first
+        arg = target.is_a?(Node::ConstNode) ? target.const_name : obj_to_perl(target)
+        if arg == :Array
           "(ref #{obj_to_perl obj.receiver} eq 'ARRAY')"
         else
           "(ref #{obj_to_perl obj.receiver} eq '#{arg}')"
@@ -259,17 +273,16 @@ module Sapphire
                 }
               EOS
             end
-          elsif obj.method_name == :map
+          elsif [:map, :any].include? obj.method_name
             receiver = obj_to_perl obj.receiver
             if receiver =~ /^\$/
               receiver = "@{#{receiver}}" # TODO
             end
             return <<-EOS.gsub(/^ +/, '').strip
-              map {
+              #{obj.method_name} {
                 #{obj_to_perl block}
               } #{receiver}
             EOS
-
           elsif obj.method_name == :lambda
             return block_to_perl(block, block_args) + semicolon_if_needed(obj.parent)
           end
@@ -284,6 +297,12 @@ module Sapphire
         if block
           args += ', ' unless args.empty?
           args += block_to_perl block, block_args
+=begin
+        elsif obj.receiver.nil? && args.empty?
+          if obj.scope.variable_defined? method
+            return "$#{method}"
+          end
+=end
         end
         "#{receiver}#{method}(#{args})"
       end + semicolon_if_needed(obj)
@@ -331,6 +350,11 @@ module Sapphire
         const_def = obj.scope.constant_definition name.to_sym
         sigil = const_def ? const_def.sigil : '$'
         "#{sigil}#{name}"
+      elsif obj.parent.is_a?(Node::CallNode) && obj.const_name == :ENV
+        # TODO: ad-hoc
+        const_def = obj.scope.constant_definition name.to_sym
+        sigil = const_def ? const_def.sigil : '$'
+        "#{sigil}#{name}"
       else
         name
       end
@@ -345,23 +369,23 @@ module Sapphire
       # TODO
       #lasgn_node_to_perl obj
       semicolon = semicolon_if_needed obj
-      sigil = obj.value.kind == :array ? '@' : obj.value.kind == :hash ? '%' : '$'
-      if obj.scope.variable_defined? obj.name
-        "#{sigil}#{obj.var_name} = #{obj_to_perl obj.value}#{semicolon}"
-      else
+      decl = ''
+      unless obj.scope.variable_defined? obj.name
         obj.scope.define_variable obj.var_name, obj.value.kind
-        "my #{sigil}#{obj.var_name} = #{obj_to_perl obj.value}#{semicolon}"
+        decl = 'my '
       end
+      var_def = obj.scope.variable_definition obj.name
+      "#{decl}#{var_def.sigil}#{obj.var_name} = #{obj_to_perl obj.value}#{semicolon}"
     end
 
     def cvdecl_node_to_perl(obj)
       # TODO
       #lasgn_node_to_perl obj
       obj.scope.define_variable obj.name, obj.value.kind
+      var_def = obj.scope.variable_definition obj.name
       name = obj.cvar_name
       value = obj_to_perl obj.value
-      sigil = obj.value.kind == :array ? '@' : obj.value.kind == :hash ? '%' : '$'
-      "our #{sigil}#{name} = #{value};"
+      "our #{var_def.sigil}#{name} = #{value};"
     end
 
     def defn_node_to_perl(obj)
@@ -437,13 +461,13 @@ module Sapphire
 
     def lasgn_node_to_perl(obj)
       semicolon = semicolon_if_needed obj
-      sigil = obj.value.kind == :array ? '@' : obj.value.kind == :hash ? '%' : '$'
-      if obj.scope.variable_defined? obj.var_name
-        "#{sigil}#{obj.var_name} = #{obj_to_perl obj.value}#{semicolon}"
-      else
+      decl = ''
+      unless obj.scope.variable_defined? obj.var_name
         obj.scope.define_variable obj.var_name, obj.value.kind
-        "my #{sigil}#{obj.var_name} = #{obj_to_perl obj.value}#{semicolon}"
+        decl = 'my '
       end
+      var_def = obj.scope.variable_definition obj.var_name
+      "#{decl}#{var_def.sigil}#{obj.var_name} = #{obj_to_perl obj.value}#{semicolon}"
     end
 
     def lvar_node_to_perl(obj)
@@ -568,7 +592,7 @@ module Sapphire
     end
 
     def binary_operator?(op)
-      %w(+ - * / % ** < > <= >= == != === <=> | ^ << >> && || 
+      %w(+ - * / % ** < > <= >= == != === <=> | ^ << >> && || =~
         .. and or eq ne cmp lt gt le ge).include? op.to_s
     end
 

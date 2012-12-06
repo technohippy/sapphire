@@ -11,6 +11,9 @@ module Sapphire
       @constant_names = []
       @variable_names = []
       @method_names = []
+
+      # TODO: should be defined in Global
+      self.define_constant :ENV, :hash
     end
 
     def all_modules

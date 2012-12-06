@@ -244,7 +244,7 @@ module Sapphire
     end
 
     class HashNode < Base
-      set_kind :hash
+      #set_kind :hash
     end
 
     class IfNode < ScopedBase

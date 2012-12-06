@@ -66,13 +66,7 @@ class TestPerlGenerator < Test::Unit::TestCase
       workbook = nil
       workbook[1]['A3']
     ACTUAL
-    assert_code <<-EXPECTED.strip, <<-ACTUAL
-      my %hash = {};
-      func(%hash);
-    EXPECTED
-      hash = {}
-      func hash
-    ACTUAL
+    assert_code '$ENV{"KEY"};', 'ENV["KEY"]'
   end
 
   def test_generate_eq
@@ -140,7 +134,7 @@ class TestPerlGenerator < Test::Unit::TestCase
     ACTUAL
 
     assert_code <<-EXPECTED.strip, <<-ACTUAL
-      my %ary = {};
+      my $ary = {};
       $ary->{0} ||= {};
     EXPECTED
       ary = {}
@@ -449,6 +443,19 @@ class TestPerlGenerator < Test::Unit::TestCase
     ACTUAL
 
     assert_code <<-EXPECTED, <<-ACTUAL
+      my $var = 0;
+      if (true) {
+        $var = ()
+      }
+    EXPECTED
+      var = 0
+      if true
+        var = []
+      end
+    ACTUAL
+
+
+    assert_code <<-EXPECTED, <<-ACTUAL
       my $var1 = 0;
       while (true) {
         $var1 = 1;
@@ -670,6 +677,14 @@ class TestPerlGenerator < Test::Unit::TestCase
     ACTUAL
 
     assert_code '__PACKAGE__->hello();', 'self.class.hello'
+
+    assert_code <<-EXPECTED.strip, <<-ACTUAL
+      my $var = undef;
+      (ref $var eq 'ARRAY');
+    EXPECTED
+      var = nil
+      var.is_a? Array
+    ACTUAL
   end
 
   def test_generate_class
@@ -739,6 +754,28 @@ class TestPerlGenerator < Test::Unit::TestCase
         self.call_class_method.call_class_method
       end
     ACTUAL
+
+=begin
+    assert_code <<-EXPECTED, <<-ACTUAL
+      {
+        package Foo;
+        use base 'Bar';
+        my $foo = undef;
+        sub method {
+          my $self = shift;
+          my $bar = $foo;
+        }
+
+      }
+    EXPECTED
+      class Foo < Bar
+        foo = nil
+        def method
+          bar = foo
+        end
+      end
+    ACTUAL
+=end
   end
 
   def test_generate_module
