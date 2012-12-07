@@ -71,16 +71,6 @@ class TestPerlGenerator < Test::Unit::TestCase
     ACTUAL
 
     assert_code '$ENV{"KEY"};', 'ENV["KEY"]'
-
-    assert_code <<-EXPECTED.strip, <<-ACTUAL
-      BEGIN {
-        some_initialization();
-      }
-    EXPECTED
-      __BEGIN__ do
-        some_initialization
-      end
-    ACTUAL
   end
 
   def test_generate_eq
@@ -679,6 +669,32 @@ class TestPerlGenerator < Test::Unit::TestCase
     ACTUAL
   end
 
+  def test_generate_funcall_print
+    assert_code <<-EXPECTED.strip, <<-ACTUAL
+      print "Hello";
+    EXPECTED
+      STDOUT.print 'Hello'
+    ACTUAL
+
+    assert_code <<-EXPECTED.strip, <<-ACTUAL
+      print "Hello";
+    EXPECTED
+      $stdout.print 'Hello'
+    ACTUAL
+
+    assert_code <<-EXPECTED.strip, <<-ACTUAL
+      print STDERR "Hello";
+    EXPECTED
+      STDERR.print 'Hello'
+    ACTUAL
+
+    assert_code <<-EXPECTED.strip, <<-ACTUAL
+      print STDERR "Hello";
+    EXPECTED
+      $stderr.print 'Hello'
+    ACTUAL
+  end
+
   def test_generate_funcall_special
     assert_code <<-EXPECTED.strip, <<-ACTUAL
       my @var = ();
@@ -698,6 +714,16 @@ class TestPerlGenerator < Test::Unit::TestCase
     EXPECTED
       var = nil
       var.is_a? Array
+    ACTUAL
+
+    assert_code <<-EXPECTED.strip, <<-ACTUAL
+      BEGIN {
+        some_initialization();
+      }
+    EXPECTED
+      __BEGIN__ do
+        some_initialization
+      end
     ACTUAL
   end
 

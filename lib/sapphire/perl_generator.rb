@@ -167,6 +167,12 @@ module Sapphire
         "(0 + #{obj_to_perl obj.receiver})"
       elsif obj.receiver.nil? && obj.method_name == :puts
         %Q|print(#{obj_to_perl obj.arglist.first} . "\\n")|
+      elsif obj.method_name == :print && 
+        (obj.receiver.const_node?(:STDERR) || obj.receiver.gvar_node?(:$stderr))
+        %Q|print STDERR #{obj_to_perl obj.arglist.first}|
+      elsif obj.method_name == :print && 
+        (obj.receiver.const_node?(:STDOUT) || obj.receiver.gvar_node?(:$stdout))
+        %Q|print #{obj_to_perl obj.arglist.first}|
       elsif obj.receiver.nil? && [:extends, :extend].include?(obj.method_name)
         mod = obj_to_perl obj.arglist.first
         mod = mod[1..-1] if mod =~ /^[$%@]/
