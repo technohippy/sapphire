@@ -71,6 +71,7 @@ class TestPerlGenerator < Test::Unit::TestCase
     ACTUAL
 
     assert_code '$ENV{"KEY"};', 'ENV["KEY"]'
+    assert_code '$SIG{"KEY"};', 'SIG["KEY"]'
   end
 
   def test_generate_eq

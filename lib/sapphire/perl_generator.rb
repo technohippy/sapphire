@@ -367,7 +367,7 @@ module Sapphire
         const_def = obj.scope.constant_definition name.to_sym
         sigil = const_def ? const_def.sigil : '$'
         "#{sigil}#{name}"
-      elsif obj.parent.is_a?(Node::CallNode) && obj.const_name == :ENV
+      elsif obj.parent.is_a?(Node::CallNode) && [:ENV, :SIG].include?(obj.const_name)
         # TODO: ad-hoc
         const_def = obj.scope.constant_definition name.to_sym
         sigil = const_def ? const_def.sigil : '$'
