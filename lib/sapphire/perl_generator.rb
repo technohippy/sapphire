@@ -167,6 +167,11 @@ module Sapphire
         "(0 + #{obj_to_perl obj.receiver})"
       elsif obj.receiver.nil? && obj.method_name == :puts
         %Q|print(#{obj_to_perl obj.arglist.first} . "\\n")|
+      elsif obj.receiver.nil? && [:extends, :extend].include?(obj.method_name)
+        mod = obj_to_perl obj.arglist.first
+        mod = mod[1..-1] if mod =~ /^[$%@]/
+        mod = %Q|"#{mod}"| unless mod =~ /^".*"$/
+        "extends #{mod}"
       elsif obj.receiver.nil? && obj.method_name == :require
         mod = obj.arglist.first.value.to_s
         mod = mod.split('/').map{|e| e.capitalize.gsub(/_([a-z])/){$1.upcase}}.join '::'
@@ -231,7 +236,7 @@ module Sapphire
       elsif obj.receiver && obj.method_name == :to_deref # TODO
         "${#{obj_to_perl obj.receiver}}"
       elsif obj.receiver && obj.method_name == :to_ref # TODO
-        "\\{#{obj_to_perl obj.receiver}}"
+        "\\#{obj_to_perl obj.receiver}"
       elsif obj.receiver && obj.method_name == :to_arrayref # TODO
         "[#{obj_to_perl obj.receiver}]"
       elsif obj.receiver && obj.method_name == :to_hash # TODO
@@ -285,6 +290,12 @@ module Sapphire
             EOS
           elsif obj.method_name == :lambda
             return block_to_perl(block, block_args) + semicolon_if_needed(obj.parent)
+          elsif obj.method_name == :__BEGIN__
+            return <<-EOS.gsub(/^ +/, '').strip
+              BEGIN {
+                #{obj_to_perl block}
+              }
+            EOS
           end
         end
 

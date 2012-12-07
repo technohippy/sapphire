@@ -45,6 +45,7 @@ class TestPerlGenerator < Test::Unit::TestCase
       ary = [1, 2, 3]
       ary[1]
     ACTUAL
+
     assert_code <<-EXPECTED.strip, <<-ACTUAL
       my $ary = [(1, 2, 3)];
       $ary->[1];
@@ -52,6 +53,7 @@ class TestPerlGenerator < Test::Unit::TestCase
       ary = [1, 2, 3].to_arrayref
       ary[1]
     ACTUAL
+
     assert_code <<-EXPECTED.strip, <<-ACTUAL
       my $var = "foo";
       $var = "bar";
@@ -59,6 +61,7 @@ class TestPerlGenerator < Test::Unit::TestCase
       var = 'foo'
       var = 'bar'
     ACTUAL
+
     assert_code <<-EXPECTED.strip, <<-ACTUAL
       my $workbook = undef;
       $workbook->[1]->{"A3"};
@@ -66,7 +69,18 @@ class TestPerlGenerator < Test::Unit::TestCase
       workbook = nil
       workbook[1]['A3']
     ACTUAL
+
     assert_code '$ENV{"KEY"};', 'ENV["KEY"]'
+
+    assert_code <<-EXPECTED.strip, <<-ACTUAL
+      BEGIN {
+        some_initialization();
+      }
+    EXPECTED
+      __BEGIN__ do
+        some_initialization
+      end
+    ACTUAL
   end
 
   def test_generate_eq
@@ -752,6 +766,42 @@ class TestPerlGenerator < Test::Unit::TestCase
     EXPECTED
       class Foo < Bar
         self.call_class_method.call_class_method
+      end
+    ACTUAL
+
+    assert_code <<-EXPECTED, <<-ACTUAL
+      {
+        package Foo;
+        use base 'Bar';
+        extends "Buzz";
+      }
+    EXPECTED
+      class Foo < Bar
+        extend Buzz
+      end
+    ACTUAL
+
+    assert_code <<-EXPECTED, <<-ACTUAL
+      {
+        package Foo;
+        use base 'Bar';
+        extends "Buzz";
+      }
+    EXPECTED
+      class Foo < Bar
+        extend 'Buzz'
+      end
+    ACTUAL
+
+    assert_code <<-EXPECTED, <<-ACTUAL
+      {
+        package Foo;
+        use base 'Bar';
+        extends "Buzz::Xyzzy";
+      }
+    EXPECTED
+      class Foo < Bar
+        extend Buzz::Xyzzy
       end
     ACTUAL
 
