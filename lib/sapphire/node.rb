@@ -1,5 +1,15 @@
 require 'sapphire/scope'
 
+class Object
+  def const_node?(name)
+    false
+  end
+
+  def gvar_node?(name)
+    false
+  end
+end
+
 module Sapphire
   module Node
     class Base
@@ -185,6 +195,10 @@ module Sapphire
 
     class ConstNode < Base
       args_reader :const_name
+
+      def const_node?(name)
+        name == self.const_name
+      end
     end
 
     class CvarNode < Base
@@ -241,6 +255,10 @@ module Sapphire
 
     class GvarNode < Base
       args_reader :gvar_name
+
+      def gvar_node?(name)
+        name == self.gvar_name
+      end
     end
 
     class HashNode < Base

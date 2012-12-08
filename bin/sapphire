@@ -29,9 +29,15 @@ else
 #    exit
 #  end
 
+  type = OPTS[:ruby_parse] 
+  type = nil if type and ['p', 'pl', 'perl'].include? type.downcase
+
+  if ARGV.empty? && OPTS[:command]
+    puts Sapphire.convert_string(OPTS[:command].join("\n"), type)
+    exit
+  end
+
   ARGV.each do |filename|
-    type = OPTS[:ruby_parse] 
-    type = nil if type and ['p', 'pl', 'perl'].include? type.downcase
     perl = OPTS[:command] ? Sapphire.convert_string(OPTS[:command].join("\n"), type) : Sapphire.convert_file(File.new(filename), type)
 
     if OPTS[:prettify] && `which perltidy`.empty?

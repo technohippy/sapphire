@@ -14,6 +14,7 @@ module Sapphire
 
       # TODO: should be defined in Global
       self.define_constant :ENV, :hash
+      self.define_constant :SIG, :hash
     end
 
     def all_modules
