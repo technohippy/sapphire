@@ -698,6 +698,14 @@ class TestPerlGenerator < Test::Unit::TestCase
 
   def test_generate_funcall_special
     assert_code <<-EXPECTED.strip, <<-ACTUAL
+      my $var = 1;
+      ("" . $var);
+    EXPECTED
+      var = 1
+      var.to_s
+    ACTUAL
+
+    assert_code <<-EXPECTED.strip, <<-ACTUAL
       my @var = ();
       my $other = undef;
       push(@var, @{$other});

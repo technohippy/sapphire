@@ -165,6 +165,8 @@ module Sapphire
         "#{receiver} #{method_name} #{arg}"
       elsif obj.receiver && obj.method_name == :to_i
         "(0 + #{obj_to_perl obj.receiver})"
+      elsif obj.receiver && obj.method_name == :to_s
+        %Q|("" . #{obj_to_perl obj.receiver})|
       elsif obj.receiver.nil? && obj.method_name == :puts
         %Q|print(#{obj_to_perl obj.arglist.first} . "\\n")|
       elsif obj.method_name == :print && 
