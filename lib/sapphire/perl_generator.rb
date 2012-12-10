@@ -253,11 +253,11 @@ module Sapphire
         "(grep { #{obj_to_perl obj.next(2)} } @{#{obj_to_perl obj.receiver}}) != 0"
       elsif obj.method_name == :is_a?
         target = obj.arglist.first
-        arg = target.is_a?(Node::ConstNode) ? target.const_name : obj_to_perl(target)
-        if arg == :Array
-          "(ref #{obj_to_perl obj.receiver} eq 'ARRAY')"
+        arg = (target.is_a?(Node::ConstNode) ? target.const_name : obj_to_perl(target)).to_s
+        if %w(SCALAR ARRAY HASH REF CODE GLOB).include? arg.upcase
+          "(ref #{obj_to_perl obj.receiver} eq '#{arg.upcase}')"
         else
-          "(ref #{obj_to_perl obj.receiver} eq '#{arg}')"
+          "#{obj_to_perl obj.receiver}->isa('#{arg}')"
         end
       elsif unary_operator? obj.method_name
         method = obj.method_name.to_s.sub(/@$/, '')
