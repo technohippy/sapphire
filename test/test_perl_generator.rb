@@ -73,6 +73,20 @@ class TestPerlGenerator < Test::Unit::TestCase
     assert_code '$ENV{"KEY"};', 'ENV["KEY"]'
     assert_code '$SIG{"KEY"};', 'SIG["KEY"]'
     assert_code 'no strict "refs";', 'no strict "refs"'
+
+    assert_code <<-EXPECTED.strip, <<-ACTUAL
+      my $func = sub {
+        my $arg = shift;
+
+      }
+      ;
+      $func->($arg);
+    EXPECTED
+      func = ->(arg){}
+      func.__call__(arg)
+    ACTUAL
+
+    assert_code 'my @ary = @_;', 'ary = @_'
   end
 
   def test_generate_eq

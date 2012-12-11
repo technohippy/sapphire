@@ -279,6 +279,10 @@ module Sapphire
 
     class IvarNode < Base
       args_reader :ivar_name
+
+      def kind
+        @kind ||= self.ivar_name == :@_ ? :array : super
+      end
     end
 
     class LasgnNode < Base

@@ -231,6 +231,8 @@ module Sapphire
         obj.scope.variable_definition(obj.receiver.var_name) && 
         obj.scope.variable_definition(obj.receiver.var_name).kind == :block # TODO
         "#{obj_to_perl obj.receiver}->(#{obj.arglist.map {|a| obj_to_perl a}.join(', ')})"
+      elsif obj.receiver && obj.method_name == :__call__
+        "#{obj_to_perl obj.receiver}->(#{obj.arglist.map {|a| obj_to_perl a}.join(', ')})"
       elsif obj.receiver && obj.method_name == :size
         receiver = obj_to_perl obj.receiver
         receiver = "@{#{receiver}}" unless receiver =~ /^@/
