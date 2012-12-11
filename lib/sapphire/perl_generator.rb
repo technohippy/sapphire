@@ -163,6 +163,9 @@ module Sapphire
             obj.method_name
           end
         "#{receiver} #{method_name} #{arg}"
+      elsif obj.receiver.nil? && [:no, :strict, :use, :base].include?(obj.method_name)
+        # method call without parenthesis
+        "#{obj.method_name} #{obj.arglist.map {|a| obj_to_perl a}.join(', ')}"
       elsif obj.receiver && obj.method_name == :to_i
         "(0 + #{obj_to_perl obj.receiver})"
       elsif obj.receiver && obj.method_name == :to_s
