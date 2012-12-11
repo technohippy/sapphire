@@ -181,8 +181,12 @@ module Sapphire
         mod = %Q|"#{mod}"| unless mod =~ /^".*"$/
         "extends #{mod}"
       elsif obj.receiver.nil? && obj.method_name == :require
-        mod = obj.arglist.first.value.to_s
-        mod = mod.split('/').map{|e| e.capitalize.gsub(/_([a-z])/){$1.upcase}}.join '::'
+        mod = obj.arglist.first.value
+        if mod.is_a? Symbol
+          mod = mod.to_s
+        else
+          mod = mod.to_s.split('/').map{|e| e.capitalize.gsub(/_([a-z])/){$1.upcase}}.join '::'
+        end
         imports = if obj.arglist[1]
             " qw(#{obj.arglist[1].arguments.map{|str| str.value.to_s}.join ' '})"
           else
@@ -257,7 +261,7 @@ module Sapphire
         if %w(SCALAR ARRAY HASH REF CODE GLOB).include? arg.upcase
           "(ref #{obj_to_perl obj.receiver} eq '#{arg.upcase}')"
         else
-          "#{obj_to_perl obj.receiver}->isa('#{arg}')"
+          "eval{#{obj_to_perl obj.receiver}->isa('#{arg}')}"
         end
       elsif unary_operator? obj.method_name
         method = obj.method_name.to_s.sub(/@$/, '')
