@@ -37,7 +37,8 @@ else
     exit
   end
 
-  ARGV.each do |filename|
+  #ARGV.each do |filename|
+  ARGV.map{|arg| Dir.glob arg}.flatten.each do |filename|
     perl = OPTS[:command] ? Sapphire.convert_string(OPTS[:command].join("\n"), type) : Sapphire.convert_file(File.new(filename), type)
 
     if OPTS[:prettify] && `which perltidy`.empty?
