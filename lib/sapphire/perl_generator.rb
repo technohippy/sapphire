@@ -183,6 +183,15 @@ module Sapphire
         mod = mod[1..-1] if mod =~ /^[$%@]/
         mod = %Q|"#{mod}"| unless mod =~ /^".*"$/
         "extends #{mod}"
+      elsif obj.receiver.nil? && obj.method_name == :include
+        mod = obj_to_perl obj.arglist.first
+        mod = mod[1..-1] if mod =~ /^\$/
+        imports = if obj.arglist[1]
+            " qw(#{obj.arglist[1].arguments.map{|str| str.value.to_s}.join ' '})"
+          else
+            ''
+          end
+        "use #{mod}#{imports}"
       elsif obj.receiver.nil? && obj.method_name == :require
         mod = obj.arglist.first.value
         if mod.is_a? Symbol
