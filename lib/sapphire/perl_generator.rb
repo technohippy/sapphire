@@ -171,7 +171,6 @@ module Sapphire
       elsif obj.receiver && obj.method_name == :nil?
         "(not defined #{obj_to_perl receiver})"
       elsif obj.receiver && obj.method_name == :to_i
-puts obj.receiver.inspect
         "(0 + #{obj_to_perl obj.receiver})"
       elsif obj.receiver && obj.method_name == :to_s
         %Q|("" . #{obj_to_perl obj.receiver})|
