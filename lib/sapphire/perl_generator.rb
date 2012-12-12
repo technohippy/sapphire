@@ -166,6 +166,10 @@ module Sapphire
       elsif obj.receiver.nil? && [:no, :strict, :use, :base].include?(obj.method_name)
         # method call without parenthesis
         "#{obj.method_name} #{obj.arglist.map {|a| obj_to_perl a}.join(', ')}"
+      elsif obj.receiver.nil? && obj.method_name == :defined?
+        "(defined #{obj_to_perl obj.arglist.first})"
+      elsif obj.receiver && obj.method_name == :nil?
+        "(not defined #{obj_to_perl receiver})"
       elsif obj.receiver && obj.method_name == :to_i
         "(0 + #{obj_to_perl obj.receiver})"
       elsif obj.receiver && obj.method_name == :to_s
@@ -174,10 +178,10 @@ module Sapphire
         %Q|print(#{obj_to_perl obj.arglist.first} . "\\n")|
       elsif obj.method_name == :print && 
         (obj.receiver.const_node?(:STDERR) || obj.receiver.gvar_node?(:$stderr))
-        %Q|print STDERR #{obj_to_perl obj.arglist.first}|
+        %Q|print STDERR #{obj.arglist.map {|a| obj_to_perl a}.join(', ')}|
       elsif obj.method_name == :print && 
         (obj.receiver.const_node?(:STDOUT) || obj.receiver.gvar_node?(:$stdout))
-        %Q|print #{obj_to_perl obj.arglist.first}|
+        %Q|print #{obj.arglist.map {|a| obj_to_perl a}.join(', ')}|
       elsif obj.receiver.nil? && [:extends, :extend].include?(obj.method_name)
         mod = obj_to_perl obj.arglist.first
         mod = mod[1..-1] if mod =~ /^[$%@]/
