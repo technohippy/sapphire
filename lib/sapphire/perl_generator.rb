@@ -483,23 +483,39 @@ module Sapphire
     end
 
     def if_node_to_perl(obj)
-      if obj.ok_body
-        (<<-EOK + (obj.ng_body ? <<-ENG : '')).gsub(/^ +/, '')
-          if (#{obj_to_perl obj.condition}) {
-            #{obj_to_perl obj.ok_body}
+      node = obj
+      src = ''
+
+      if node.ok_body
+        src << <<-EOS
+        if (#{obj_to_perl node.condition}) {
+          #{obj_to_perl node.ok_body}
+        }
+        EOS
+        while node.ng_body.instance_of?(Sapphire::Node::IfNode) && node.ng_body.ok_body
+          node = node.ng_body
+          src << <<-EOS
+          elsif (#{obj_to_perl node.condition}) {
+            #{obj_to_perl node.ok_body}
           }
-        EOK
+          EOS
+        end
+        if node.ng_body
+          src << <<-EOS
           else {
-            #{obj_to_perl obj.ng_body}
+            #{obj_to_perl node.ng_body}
           }
-        ENG
+          EOS
+        end
       else
-        <<-EOS.gsub(/^ +/, '')
-          unless (#{obj_to_perl obj.condition}) {
-            #{obj_to_perl obj.ng_body}
-          }
+        src << <<-EOS
+        unless (#{obj_to_perl node.condition}) {
+          #{obj_to_perl node.ng_body}
+        }
         EOS
       end
+
+      src.gsub(/^ +/, '')
     end
 
     def lasgn_node_to_perl(obj)
@@ -566,9 +582,9 @@ module Sapphire
       arg = obj_to_perl obj.arglist.first
       value = obj_to_perl obj.value
       if receiver =~ /^@/
-        "#{receiver.sub /^@/, '$'}[#{arg}] #{obj.op}= #{value}#{semicolon_if_needed obj}"
+        "#{receiver.sub(/^@/, '$')}[#{arg}] #{obj.op}= #{value}#{semicolon_if_needed obj}"
       else
-        "#{receiver.sub /^%/, '$'}->{#{arg}} #{obj.op}= #{value}#{semicolon_if_needed obj}"
+        "#{receiver.sub(/^%/, '$')}->{#{arg}} #{obj.op}= #{value}#{semicolon_if_needed obj}"
       end
     end
 
@@ -580,7 +596,7 @@ module Sapphire
 
     def postexe_node_to_obj(obj)
       body = obj.parent.body
-      <<-EOS.gsub /^ +/, ''
+      <<-EOS.gsub(/^ +/, '')
         END {
           #{obj_to_perl body}
         }
