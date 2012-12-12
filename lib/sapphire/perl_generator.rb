@@ -44,6 +44,8 @@ module Sapphire
         cvasgn_node_to_perl obj
       when Node::CvdeclNode
         cvdecl_node_to_perl obj
+      when Node::DefinedNode
+        "(defined #{obj_to_perl obj.first})"
       when Node::DefnNode
         defn_node_to_perl obj
       when Node::Dot2Node
@@ -166,11 +168,10 @@ module Sapphire
       elsif obj.receiver.nil? && [:no, :strict, :use, :base].include?(obj.method_name)
         # method call without parenthesis
         "#{obj.method_name} #{obj.arglist.map {|a| obj_to_perl a}.join(', ')}"
-      elsif obj.receiver.nil? && obj.method_name == :defined?
-        "(defined #{obj_to_perl obj.arglist.first})"
       elsif obj.receiver && obj.method_name == :nil?
         "(not defined #{obj_to_perl receiver})"
       elsif obj.receiver && obj.method_name == :to_i
+puts obj.receiver.inspect
         "(0 + #{obj_to_perl obj.receiver})"
       elsif obj.receiver && obj.method_name == :to_s
         %Q|("" . #{obj_to_perl obj.receiver})|

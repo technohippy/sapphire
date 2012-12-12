@@ -228,6 +228,9 @@ module Sapphire
       alias var_name cvar_name
     end
 
+    class DefinedNode < KeywordBase
+    end
+
     class DefnNode < ScopedBase
       args_reader :method_name, :method_args
       body_reader 2..-1

@@ -516,6 +516,44 @@ class TestPerlGenerator < Test::Unit::TestCase
       end
       var3 = 0
     ACTUAL
+
+    assert_code <<-EXPECTED, <<-ACTUAL
+      {
+        package Foo;
+        my $bar = undef;
+        sub buzz {
+          my $self = shift;
+          $bar = "xyzzy";
+        }
+
+      }
+    EXPECTED
+      class Foo
+        bar = nil
+        def buzz
+          bar = 'xyzzy'
+        end
+      end
+    ACTUAL
+
+    assert_code <<-EXPECTED, <<-ACTUAL
+      {
+        package Foo;
+        my $bar = "12345";
+        sub buzz {
+          my $self = shift;
+          0 + $bar
+        }
+
+      }
+    EXPECTED
+      class Foo
+        bar = '12345'
+        def buzz
+          bar.to_i
+        end
+      end
+    ACTUAL
   end
 
   def test_generate_defun
