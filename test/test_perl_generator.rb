@@ -536,6 +536,7 @@ class TestPerlGenerator < Test::Unit::TestCase
       end
     ACTUAL
 
+=begin
     assert_code <<-EXPECTED, <<-ACTUAL
       {
         package Foo;
@@ -554,6 +555,7 @@ class TestPerlGenerator < Test::Unit::TestCase
         end
       end
     ACTUAL
+=end
   end
 
   def test_generate_defun
@@ -865,19 +867,7 @@ class TestPerlGenerator < Test::Unit::TestCase
       }
     EXPECTED
       class Foo < Bar
-        extend Buzz
-      end
-    ACTUAL
-
-    assert_code <<-EXPECTED, <<-ACTUAL
-      {
-        package Foo;
-        use base 'Bar';
-        extends "Buzz";
-      }
-    EXPECTED
-      class Foo < Bar
-        extend 'Buzz'
+        extends Buzz
       end
     ACTUAL
 
@@ -889,6 +879,28 @@ class TestPerlGenerator < Test::Unit::TestCase
       }
     EXPECTED
       class Foo < Bar
+        extends Buzz::Xyzzy
+      end
+    ACTUAL
+
+    assert_code <<-EXPECTED, <<-ACTUAL
+      {
+        package Foo;
+        use base "Bar";
+      }
+    EXPECTED
+      class Foo
+        extend 'Bar'
+      end
+    ACTUAL
+
+    assert_code <<-EXPECTED, <<-ACTUAL
+      {
+        package Foo;
+        use base "Buzz::Xyzzy";
+      }
+    EXPECTED
+      class Foo
         extend Buzz::Xyzzy
       end
     ACTUAL

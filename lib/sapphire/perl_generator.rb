@@ -183,10 +183,11 @@ module Sapphire
         (obj.receiver.const_node?(:STDOUT) || obj.receiver.gvar_node?(:$stdout))
         %Q|print #{obj.arglist.map {|a| obj_to_perl a}.join(', ')}|
       elsif obj.receiver.nil? && [:extends, :extend].include?(obj.method_name)
+        method_name = obj.method_name == :extend ? 'use base' : 'extends'
         mod = obj_to_perl obj.arglist.first
         mod = mod[1..-1] if mod =~ /^[$%@]/
         mod = %Q|"#{mod}"| unless mod =~ /^".*"$/
-        "extends #{mod}"
+        "#{method_name} #{mod}"
       elsif obj.receiver.nil? && obj.method_name == :include
         mod = obj_to_perl obj.arglist.first
         mod = mod[1..-1] if mod =~ /^\$/
