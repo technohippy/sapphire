@@ -566,9 +566,9 @@ module Sapphire
       arg = obj_to_perl obj.arglist.first
       value = obj_to_perl obj.value
       if receiver =~ /^@/
-        "#{receiver.sub /^@/, '$'}[#{arg}] #{obj.op}= #{value}#{semicolon_if_needed obj}"
+        "#{receiver.sub(/^@/, '$')}[#{arg}] #{obj.op}= #{value}#{semicolon_if_needed obj}"
       else
-        "#{receiver.sub /^%/, '$'}->{#{arg}} #{obj.op}= #{value}#{semicolon_if_needed obj}"
+        "#{receiver.sub(/^%/, '$')}->{#{arg}} #{obj.op}= #{value}#{semicolon_if_needed obj}"
       end
     end
 
@@ -580,7 +580,7 @@ module Sapphire
 
     def postexe_node_to_obj(obj)
       body = obj.parent.body
-      <<-EOS.gsub /^ +/, ''
+      <<-EOS.gsub(/^ +/, '')
         END {
           #{obj_to_perl body}
         }
