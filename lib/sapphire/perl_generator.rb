@@ -335,6 +335,7 @@ module Sapphire
         if method =~ /^(.*)[!?]$/
           method = $1
         end
+        method.gsub! /\B__\B/, '::'
         args = obj.arglist.map {|a| obj_to_perl a}.join(', ')
         if block
           args += ', ' unless args.empty?
