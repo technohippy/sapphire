@@ -199,19 +199,15 @@ class TestPerlGenerator < Test::Unit::TestCase
       end
     ACTUAL
 
-    # TODO: how to handle dangling elses
     assert_code <<-EXPECTED, <<-ACTUAL
       if (bool()) {
         do_something()
       }
+      elsif (bool2()) {
+        do_anotherthing()
+      }
       else {
-        if (bool2()) {
-          do_anotherthing()
-        }
-        else {
-          do_other()
-        }
-
+        do_other()
       }
     EXPECTED
       if bool
