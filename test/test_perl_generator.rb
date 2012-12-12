@@ -87,6 +87,7 @@ class TestPerlGenerator < Test::Unit::TestCase
     ACTUAL
 
     assert_code 'my @ary = @_;', 'ary = @_'
+    assert_code 'module::method(1);', 'module__method 1'
   end
 
   def test_generate_eq
