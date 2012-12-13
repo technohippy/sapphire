@@ -494,6 +494,19 @@ module Sapphire
         !node.ng_body.is_a?(Sapphire::Node::AsgnBase) 
         src << "#{obj_to_perl node.condition} ? #{obj_to_perl node.ok_body} : #{
           obj_to_perl node.ng_body}#{semicolon_if_needed node}"
+=begin
+      # if/unless modifier
+      elsif node.ok_body && 
+        !node.ok_body.is_a?(Sapphire::Node::ScopedBase) &&
+        !node.ng_body
+        src << "#{obj_to_perl(node.ok_body).sub(/;$/, '')} if #{
+          obj_to_perl node.condition}#{semicolon_if_needed node}"
+      elsif !node.ok_body &&
+        node.ng_body && 
+        !node.ng_body.is_a?(Sapphire::Node::ScopedBase)
+        src << "#{obj_to_perl(node.ng_body).sub(/;$/, '')} unless #{
+          obj_to_perl node.condition}#{semicolon_if_needed node}"
+=end
       elsif node.ok_body
         src << <<-EOS
         if (#{obj_to_perl node.condition}) {

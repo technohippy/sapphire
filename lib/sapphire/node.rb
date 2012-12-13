@@ -137,7 +137,7 @@ module Sapphire
       args_reader :receiver, :method_name, :value
     end
 
-    class BlockNode < Base
+    class BlockNode < ScopedBase
     end
 
     class BlockPassNode < Base
