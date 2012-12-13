@@ -313,7 +313,7 @@ class TestPerlGenerator < Test::Unit::TestCase
       eval {
         1 / 0
       };
-      if ($@ && eval{$@->isa("ZeroDivisionError")}) {
+      if ($@ && $@->isa("ZeroDivisionError")) {
         print("error" . "\\n");
       }
 
@@ -329,7 +329,7 @@ class TestPerlGenerator < Test::Unit::TestCase
       eval {
         1 / 0
       };
-      if ($@ && eval{$@->isa("ZeroDivisionError")}) {
+      if ($@ && $@->isa("ZeroDivisionError")) {
         my $e = $@;
         print($e . "\\n");
       }
@@ -346,10 +346,10 @@ class TestPerlGenerator < Test::Unit::TestCase
       eval {
         1 / 0
       };
-      if ($@ && eval{$@->isa("ZeroDivisionError")}) {
+      if ($@ && $@->isa("ZeroDivisionError")) {
         print("zero division" . "\\n");
       }
-      else if ($@ && eval{$@->isa("Exception")}) {
+      else if ($@ && $@->isa("Exception")) {
         print("exception" . "\\n");
       }
 
