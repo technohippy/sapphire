@@ -100,6 +100,9 @@ module Sapphire
       end
     end
 
+    class AsgnBase < Base
+    end
+
     class ScopedBase < Base
       def setup(scope=Scope.new)
         super scope.create_child
@@ -130,7 +133,7 @@ module Sapphire
       set_kind :array
     end
 
-    class AttrasgnNode < Base
+    class AttrasgnNode < AsgnBase
       args_reader :receiver, :method_name, :value
     end
 
@@ -210,7 +213,7 @@ module Sapphire
       alias var_name cvar_name
     end
 
-    class CvasgnNode < Base
+    class CvasgnNode < AsgnBase
       args_reader :name, :value
 
       def cvar_name
@@ -288,7 +291,7 @@ module Sapphire
       end
     end
 
-    class LasgnNode < Base
+    class LasgnNode < AsgnBase
       args_reader :var_name, :value
     end
 
@@ -309,7 +312,7 @@ module Sapphire
       end
     end
 
-    class MasgnNode < Base
+    class MasgnNode < AsgnBase
       args_reader :lasgns, :values
     end
 
@@ -343,11 +346,11 @@ module Sapphire
       end
     end
 
-    class OpAsgn1Node < Base
+    class OpAsgn1Node < AsgnBase
       args_reader :receiver, :arglist, :op, :value 
     end
 
-    class OpAsgnOrNode < Base
+    class OpAsgnOrNode < AsgnBase
       args_reader :receiver, :lasgn
       
       def value

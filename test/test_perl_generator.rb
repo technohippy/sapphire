@@ -184,16 +184,26 @@ class TestPerlGenerator < Test::Unit::TestCase
   end
 
   def test_generate_if
+    assert_code <<-EXPECTED.strip, <<-ACTUAL
+      bool() ? do_something() : do_other();
+    EXPECTED
+      if bool
+        do_something
+      else
+        do_other
+      end
+    ACTUAL
+
     assert_code <<-EXPECTED, <<-ACTUAL
       if (bool()) {
-        do_something()
+        my $var = 1
       }
       else {
         do_other()
       }
     EXPECTED
       if bool
-        do_something
+        var = 1
       else
         do_other
       end
@@ -219,14 +229,8 @@ class TestPerlGenerator < Test::Unit::TestCase
       end
     ACTUAL
 
-    # TODO
-    assert_code <<-EXPECTED, <<-ACTUAL
-      if (bool()) {
-        do_something()
-      }
-      else {
-        do_other()
-      }
+    assert_code <<-EXPECTED.strip, <<-ACTUAL
+      bool() ? do_something() : do_other();
     EXPECTED
       bool ? do_something : do_other
     ACTUAL
