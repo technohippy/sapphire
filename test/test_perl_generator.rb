@@ -574,16 +574,15 @@ class TestPerlGenerator < Test::Unit::TestCase
       end
     ACTUAL
 
-=begin
     assert_code <<-EXPECTED, <<-ACTUAL
       sub foo {
         my $bar = shift || 1;
+
       }
     EXPECTED
       def foo(bar=1)
       end
     ACTUAL
-=end
 
     assert_code <<-EXPECTED, <<-ACTUAL
       sub foo {

@@ -446,7 +446,9 @@ module Sapphire
         end
       end
       asgn_args = tmp_args.map do |arg|
-        if arg.to_s =~ /^\*(.*)/
+        if arg.is_a? Node::LasgnNode
+          "my $#{arg.var_name} = shift || #{obj_to_perl arg.value};"
+        elsif arg.to_s =~ /^\*(.*)/
           obj.scope.define_variable $1, :array
           "my @#{$1} = @_;"
         elsif arg.to_s =~ /^\&(.*)/
