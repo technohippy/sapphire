@@ -630,7 +630,7 @@ module Sapphire
       rescue_var = obj.exception_name
       exception_class = obj.exception_class
       <<-EOS.gsub(/^ +/, '')
-        if ($@#{exception_class ? " && is_instance($@, \"#{exception_class}\")" : ''}) {#{
+        if ($@#{exception_class ? " && eval{$@->isa(\"#{exception_class}\")}" : ''}) {#{
           rescue_var ? "\nmy $#{rescue_var} = $@;" : ''}
           #{obj_to_perl obj.body}
         }
