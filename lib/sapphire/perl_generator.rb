@@ -424,11 +424,18 @@ module Sapphire
     def cvdecl_node_to_perl(obj)
       # TODO
       #lasgn_node_to_perl obj
-      obj.scope.define_variable obj.name, obj.value.kind
-      var_def = obj.scope.variable_definition obj.name
-      name = obj.cvar_name
+      key   = obj.name
+      name  = obj.cvar_name
       value = obj_to_perl obj.value
-      "our #{var_def.sigil}#{name} = #{value};"
+      decl  = ''
+
+      unless obj.scope.variable_defined?(key)
+        obj.scope.define_variable key, obj.value.kind
+        decl = 'our '
+      end
+
+      var_def = obj.scope.variable_definition key
+      "#{decl}#{var_def.sigil}#{name} = #{value};"
     end
 
     def defn_node_to_perl(obj)
