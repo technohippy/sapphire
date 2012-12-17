@@ -28,6 +28,8 @@ module Sapphire
         block_node_to_perl obj
       when Node::CallNode
         call_node_to_perl obj
+      when Node::CaseNode
+        case_node_to_perl obj
       when Node::CdeclNode
         cdecl_node_to_perl obj
       when Node::ClassNode
@@ -95,6 +97,8 @@ module Sapphire
         obj.value.inspect
       when Node::UntilNode
         until_node_to_perl obj
+      when Node::WhenNode
+        when_node_to_perl obj
       when Node::WhileNode
         while_node_to_perl obj
       when Node::XstrNode
@@ -349,6 +353,22 @@ module Sapphire
         end
         "#{receiver}#{method}(#{args})"
       end + semicolon_if_needed(obj)
+    end
+
+    def case_node_to_perl(obj)
+      var = obj.var_name
+      bodies = obj.arguments[1..-1]
+      bodies.map do |body|
+        if body.is_a? Node::WhenNode
+          obj_to_perl body
+        elsif !body.nil?
+          <<-EOS.gsub(/^ +/, '')
+            e {
+              #{obj_to_perl body}
+            }
+          EOS
+        end.strip
+      end.join "\nels"
     end
 
     def cdecl_node_to_perl(obj)
@@ -651,6 +671,23 @@ module Sapphire
       <<-EOS.gsub(/^ +/, '')
         until (#{obj_to_perl obj.condition}) {
           #{obj_to_perl obj.body}
+        }
+      EOS
+    end
+
+    def when_node_to_perl(obj)
+      var_name = obj_to_perl obj.parent.var_name
+      bodies = obj.arguments[1..-1]
+      is_str = var_name =~ /^(["']).*?\1$/
+      condition = obj.expected_values.arguments.map do |value|
+        expected_value = obj_to_perl value
+        is_str = expected_value =~ /^(["']).*?\1$/
+        cond = is_str ? 'eq' : '=='
+        "#{var_name} #{cond} #{expected_value}"
+      end.join " || "
+      <<-EOS.gsub(/^ +/, '')
+        if (#{condition}) {
+          #{bodies.map{|b| obj_to_perl b}.join "\n"}
         }
       EOS
     end

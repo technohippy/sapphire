@@ -364,30 +364,35 @@ class TestPerlGenerator < Test::Unit::TestCase
     ACTUAL
   end
 
-=begin
   def test_generate_case
-    assert_code <<-EXPECTED, <<-ACTUAL
+    assert_code <<-EXPECTED.strip, <<-ACTUAL
+      my $val = undef;
       if ($val eq "abc") {
-        say("abc");
+        print("abc" . "\\n")
       }
-      elsif ($val eq "def") {
-        say("def");
+      elsif ($val == 123) {
+        print("123" . "\\n")
+      }
+      elsif ($val eq "def" || $val == 456) {
+        print("def456" . "\\n")
       }
       else {
-        say("else");
+        print("else" . "\\n")
       }
     EXPECTED
+      val = nil
       case val
       when 'abc'
         puts 'abc'
-      when 'def'
-        puts 'def'
+      when 123 
+        puts "#{123}"
+      when 'def', 456
+        puts "def456"
       else
         puts 'else'
       end
     ACTUAL
   end
-=end
 
   def test_generate_while
     assert_code <<-EXPECTED, <<-ACTUAL

@@ -164,6 +164,10 @@ module Sapphire
       end
     end
 
+    class CaseNode < Base
+      args_reader :var_name
+    end
+
     class CdeclNode < Base
       args_reader :const_name, :value
 
@@ -240,6 +244,14 @@ module Sapphire
 
       def _setup
         @scope.define_method method_name
+# TODO
+=begin
+        if @scope.parent && !@scope.parent.is_a?(NilScope)
+          @scope.parent.define_method method_name
+        else
+          @scope.define_method method_name
+        end
+=end
       end
     end
 
@@ -427,6 +439,11 @@ module Sapphire
     class UntilNode < ScopedBase
       args_reader :condition
       body_reader 1..-2
+    end
+
+    class WhenNode < ScopedBase
+      args_reader :expected_values
+      body_reader
     end
 
     class WhileNode < ScopedBase
