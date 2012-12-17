@@ -178,6 +178,10 @@ module Sapphire
         "(0 + #{obj_to_perl obj.receiver})"
       elsif obj.receiver && obj.method_name == :to_s
         %Q|("" . #{obj_to_perl obj.receiver})|
+      elsif obj.receiver.nil? && obj.method_name == :method && 
+        obj.arglist.size == 1 && obj.arglist.first.is_a?(Node::LitNode) && 
+        obj.arglist.first.value.is_a?(Symbol)
+        "\\&#{obj.arglist.first.value.to_s}"
       elsif obj.receiver.nil? && obj.method_name == :puts
         %Q|print(#{obj_to_perl obj.arglist.first} . "\\n")|
       elsif obj.method_name == :print && 
