@@ -171,6 +171,24 @@ class TestPerlGenerator < Test::Unit::TestCase
     ACTUAL
   end
 
+  def test_generate_define_and_assign
+    assert_code <<-EXPECTED.strip, <<-ACTUAL
+      my $val = 1;
+      $val = 2;
+    EXPECTED
+      val = 1
+      val = 2
+    ACTUAL
+
+    assert_code <<-EXPECTED.strip, <<-ACTUAL
+      our $val = 1;
+      $val = 2;
+    EXPECTED
+      @@val = 1
+      @@val = 2
+    ACTUAL
+  end
+
   def test_generate_dstr
     assert_code '"Hello, " . world() . "!"', '"Hello, #{world}!"'
     assert_code '"" . hello() . ", world!"', '"#{hello}, world!"'
