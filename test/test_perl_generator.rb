@@ -170,6 +170,42 @@ class TestPerlGenerator < Test::Unit::TestCase
       val = nil
       val ||= {}
     ACTUAL
+
+    assert_code <<-EXPECTED.strip, <<-ACTUAL
+      my $val1 = undef;
+      my *val2 = $val1;
+    EXPECTED
+      val1 = nil
+      val2 = val1.to_glob
+    ACTUAL
+
+    assert_code <<-EXPECTED.strip, <<-ACTUAL
+      local $val1 = 1;
+    EXPECTED
+      local do val1 = 1; end
+    ACTUAL
+
+    assert_code <<-EXPECTED.strip, <<-ACTUAL
+      local $val1 = 1;
+      local $val2 = 2;
+    EXPECTED
+      local do
+        val1 = 1
+        val2 = 2
+      end
+    ACTUAL
+
+    assert_code <<-EXPECTED.strip, <<-ACTUAL
+      local $SIG{"key"} = 1;
+    EXPECTED
+      local do SIG['key'] = 1; end
+    ACTUAL
+
+    assert_code <<-EXPECTED.strip, <<-ACTUAL
+      "string" = 1;
+    EXPECTED
+      __lvar__["string"] = 1
+    ACTUAL
   end
 
   def test_generate_define_and_assign

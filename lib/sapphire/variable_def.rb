@@ -14,6 +14,7 @@ module Sapphire
       when :array; '@'
       when :hash;  '%'
       when :block; '&'
+      when :glob;  '*'
       else;        '$'
       end
     end

@@ -159,6 +159,7 @@ module Sapphire
           case self.method_name
           when :map, :split; :array
           when :to_hash;     :hash
+          when :to_glob;     :glob
           else               super
           end
       end
@@ -269,6 +270,10 @@ module Sapphire
 
     class FalseNode < KeywordBase
       set_keyword 'false'
+    end
+
+    class GasgnNode < AsgnBase
+      args_reader :gvar_name, :value
     end
 
     class GvarNode < Base

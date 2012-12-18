@@ -56,6 +56,8 @@ module Sapphire
         dstr_node_to_perl obj
       when Node::EvstrNode
         obj_to_perl obj.expression
+      when Node::GasgnNode
+        gasgn_node_to_perl obj
       when Node::GvarNode
         gvar_node_to_perl obj
       when Node::HashNode
@@ -128,18 +130,32 @@ module Sapphire
           obj_to_perl obj.receiver
         end
       attr = obj.method_name.to_s.sub('=', '')
-      if attr == '[]'
+      if receiver == '__lvar__()' && attr == '[]'
+        decl = in_local_block?(obj) ? 'local ' : ''
+        lvar = obj_to_perl obj.arguments[2]
+        case obj.arguments[3].kind
+        when :array
+          lvar = "@{#{lvar}}"
+        when :hash
+          lvar = "%{#{lvar}}"
+        when :glob
+          lvar = "*{#{lvar}}"
+        end
+        val = obj_to_perl obj.arguments[3]
+        "#{decl}#{lvar} = #{val};"
+      elsif attr == '[]'
+        decl = in_local_block?(obj) ? 'local ' : ''
         index = obj_to_perl obj.arguments[2]
         val = obj_to_perl obj.arguments[3]
         # TODO: same as :[] in call_node
         if receiver =~ /^@(.*)/
-          "$#{$1}[#{index}] = #{val};"
+          "#{decl}$#{$1}[#{index}] = #{val};"
         elsif receiver =~ /^%(.*)/
-          "$#{$1}{#{index}} = #{val};"
+          "#{decl}$#{$1}{#{index}} = #{val};"
         elsif index =~ /^-?\d+$/
-          "#{receiver}->[#{index}] = #{val};"
+          "#{decl}#{receiver}->[#{index}] = #{val};"
         else
-          "#{receiver}->{#{index}} = #{val};"
+          "#{decl}#{receiver}->{#{index}} = #{val};"
         end
       else
         val = obj_to_perl obj.value
@@ -169,7 +185,7 @@ module Sapphire
             obj.method_name
           end
         "#{receiver} #{method_name} #{arg}"
-      elsif obj.receiver.nil? && [:no, :strict, :use, :base].include?(obj.method_name)
+      elsif obj.receiver.nil? && [:no, :strict, :use, :base, :warnings].include?(obj.method_name)
         # method call without parenthesis
         "#{obj.method_name} #{obj.arglist.map {|a| obj_to_perl a}.join(', ')}"
       elsif obj.receiver && obj.method_name == :nil?
@@ -223,7 +239,7 @@ module Sapphire
           lit.value.to_s}.join(' ')}))"
       elsif obj.receiver.is_a?(Node::SelfNode) &&
         obj.method_name == :class
-        "__PACKAGE__"
+        '__PACKAGE__'
       elsif obj.receiver.is_a?(Node::SelfNode) && in_class_context?(obj)
         "__PACKAGE__->#{obj.method_name}(#{obj.arglist.map {|a| obj_to_perl a}.join(', ')})"
       elsif obj.method_name == :[]
@@ -280,6 +296,8 @@ module Sapphire
         "[#{obj_to_perl obj.receiver}]"
       elsif obj.receiver && obj.method_name == :to_hash # TODO
         obj_to_perl obj.receiver
+      elsif obj.receiver && obj.method_name == :to_glob # TODO
+        obj_to_perl obj.receiver
       elsif obj.receiver && [:find, :select].include?(obj.method_name)
         "(grep { #{obj_to_perl obj.next(2)} } @{#{obj_to_perl obj.receiver}}) != 0"
       elsif obj.method_name == :is_a?
@@ -335,6 +353,8 @@ module Sapphire
                 #{obj_to_perl block}
               }
             EOS
+          elsif obj.method_name == :local
+            return obj_to_perl(block)
           end
         end
 
@@ -503,6 +523,11 @@ module Sapphire
       ([obj.str.inspect] + obj.arguments[1..-1].map{|e| obj_to_perl e}).join ' . '
     end
 
+    def gasgn_node_to_perl(obj)
+      "#{in_local_block?(obj) ? 'local ' : ''}#{obj.gvar_name} = #{
+        obj_to_perl obj.value}#{semicolon_if_needed obj}"
+    end
+
     def gvar_node_to_perl(obj)
       obj.gvar_name == :$! ? '$@' : obj.gvar_name.to_s
     end
@@ -575,9 +600,15 @@ module Sapphire
     def lasgn_node_to_perl(obj)
       semicolon = semicolon_if_needed obj
       decl = ''
-      unless obj.scope.variable_defined? obj.var_name
+      if in_local_block?(obj)
+        # TODO
         obj.scope.define_variable obj.var_name, obj.value.kind
-        decl = 'my '
+        decl = 'local '
+      else
+        unless obj.scope.variable_defined? obj.var_name
+          obj.scope.define_variable obj.var_name, obj.value.kind
+          decl = 'my '
+        end
       end
       var_def = obj.scope.variable_definition obj.var_name
       "#{decl}#{var_def.sigil}#{obj.var_name} = #{obj_to_perl obj.value}#{semicolon}"
@@ -750,6 +781,21 @@ module Sapphire
         end
       end
       true
+    end
+
+    def in_local_block?(obj)
+      (
+        obj.parent.is_a?(Node::BlockNode) &&
+        obj.parent.parent.is_a?(Node::IterNode) && 
+        obj.parent.parent.first.is_a?(Node::CallNode) &&
+        obj.parent.parent.first.method_name == :local
+      ) || (
+        obj.parent.is_a?(Node::BlockNode) &&
+        obj.parent.parent.is_a?(Node::BlockNode) &&
+        obj.parent.parent.parent.is_a?(Node::IterNode) && 
+        obj.parent.parent.parent.first.is_a?(Node::CallNode) &&
+        obj.parent.parent.parent.first.method_name == :local
+      )
     end
   end
 end
