@@ -130,7 +130,7 @@ module Sapphire
           obj_to_perl obj.receiver
         end
       attr = obj.method_name.to_s.sub('=', '')
-      if receiver == '__lvar__()' && attr == '[]'
+      if %w[__lvar__ __lvar__()].include?(receiver) && attr == '[]'
         decl = in_local_block?(obj) ? 'local ' : ''
         lvar = obj_to_perl obj.arguments[2]
         case obj.arguments[3].kind
@@ -206,6 +206,13 @@ module Sapphire
       elsif obj.method_name == :print && 
         (obj.receiver.const_node?(:STDOUT) || obj.receiver.gvar_node?(:$stdout))
         %Q|print #{obj.arglist.map {|a| obj_to_perl a}.join(', ')}|
+      elsif obj.receiver && obj.method_name == :gsub!
+        receiver = obj_to_perl obj.receiver
+        src = obj.arglist[0].value
+        src = src.source if src.is_a? Regexp
+        dest = obj.arglist[1].value
+        dest = dest.source if dest.is_a? Regexp
+        "#{receiver} =~ s/#{src}/#{dest}/"
       elsif obj.receiver.nil? && [:extends, :extend].include?(obj.method_name)
         method_name = obj.method_name == :extend ? 'use base' : 'extends'
         mod = obj_to_perl obj.arglist.first

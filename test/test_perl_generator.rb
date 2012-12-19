@@ -238,6 +238,16 @@ class TestPerlGenerator < Test::Unit::TestCase
     ACTUAL
   end
 
+  def test_generate_replace
+    assert_code <<-EXPECTED.strip, <<-ACTUAL
+      my $str = "abcabc";
+      $str =~ s/b/B/;
+    EXPECTED
+      str = 'abcabc'
+      str.gsub! /b/, 'B'
+    ACTUAL
+  end
+
   def test_generate_if
     assert_code <<-EXPECTED.strip, <<-ACTUAL
       bool() ? do_something() : do_other();
