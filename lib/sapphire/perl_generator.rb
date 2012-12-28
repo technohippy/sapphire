@@ -407,7 +407,8 @@ module Sapphire
       value = obj_to_perl obj.value
       kind = obj.value.is_a?(Node::ArrayNode) ? :array : :ref
       const_def = obj.scope.define_constant name, kind
-      "use constant #{const_def.sigil}#{name} => #{value};"
+      #"use constant #{const_def.sigil}#{name} => #{value};"
+      "use constant #{name} => #{value};"
     end
 
     def class_node_to_perl(obj)
@@ -443,7 +444,8 @@ module Sapphire
         # in arglist
         const_def = obj.scope.constant_definition name.to_sym
         sigil = const_def ? const_def.sigil : '$'
-        "#{sigil}#{name}"
+        #"#{sigil}#{name}"
+        "#{name}"
       elsif [:ENV, :SIG].include?(obj.const_name)
         # TODO: ad-hoc
         const_def = obj.scope.constant_definition name.to_sym
