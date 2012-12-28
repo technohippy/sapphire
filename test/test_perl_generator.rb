@@ -975,6 +975,23 @@ class TestPerlGenerator < Test::Unit::TestCase
       end
     ACTUAL
 
+    assert_code <<-EXPECTED, <<-ACTUAL
+      {
+        package Foo;
+        __PACKAGE__->bar("key", sub {
+            my $self = shift;
+            $self->buzz();
+          }
+        );
+      }
+    EXPECTED
+      class Foo
+        self.bar 'key', ->(__self__) {
+          self.buzz
+        }
+      end
+    ACTUAL
+
 =begin
     assert_code <<-EXPECTED, <<-ACTUAL
       {

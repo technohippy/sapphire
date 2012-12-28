@@ -769,6 +769,7 @@ module Sapphire
     def block_to_perl(block, args)
       asgn_args = if args && args != 0
           args[0] = :self if args.first == :__self__ # TODO
+          block.parent.scope.define_variable 'self', :ref # TODO
           args.arguments.map do |arg|
             "my $#{arg} = shift;"
           end.join "\n"
@@ -784,10 +785,9 @@ module Sapphire
     end
 
     def in_class_context?(obj)
+      return false if obj.scope.variable_defined? :self
       while obj = obj.parent
-        if obj.is_a? Node::DefnNode
-          return false
-        end
+        return false if obj.is_a? Node::DefnNode
       end
       true
     end
