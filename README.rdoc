@@ -31,7 +31,7 @@ https://github.com/technohippy/sapphire-sample
 
 === Convert
 
-  $ ruby -Ilib bin/sapphire misc/write_file.rb
+  $ bin/sapphire misc/write_file.rb
   use strict;
   use warnings;
   use Path::Class;
@@ -48,7 +48,7 @@ https://github.com/technohippy/sapphire-sample
 
 === Execute
 
-  $ ruby -Ilib bin/sapphire misc/write_file.rb | perl
+  $ bin/sapphire misc/write_file.rb | perl
   $ cat /tmp/file.txt
   a
   list
