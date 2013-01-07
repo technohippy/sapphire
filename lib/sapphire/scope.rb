@@ -4,8 +4,6 @@ module Sapphire
   class Scope
     attr_accessor :module
 
-    Global = self.new
-
     def initialize(parent=NilScope.new)
       @parent = parent
       @constant_names = []
@@ -138,3 +136,4 @@ module Sapphire
     end
   end
 end
+Sapphire::Scope::Global = Sapphire::Scope.new
