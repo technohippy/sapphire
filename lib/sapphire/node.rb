@@ -459,5 +459,9 @@ module Sapphire
     class XstrNode < Base
       args_reader :value
     end
+
+    class ZsuperNode < KeywordBase
+      set_keyword '$self->SUPER'
+    end
   end
 end

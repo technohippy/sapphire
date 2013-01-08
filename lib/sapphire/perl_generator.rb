@@ -365,7 +365,14 @@ module Sapphire
           end
         end
 
-        receiver = obj.receiver ? "#{obj_to_perl obj.receiver}->" : ''
+        receiver = case obj.receiver
+          when Node::ZsuperNode
+            "$self->SUPER::"
+          when NilClass
+            ''
+          else
+            "#{obj_to_perl obj.receiver}->"
+          end
         method = obj.method_name.to_s
         if method =~ /^(.*)[!?]$/
           method = $1
@@ -559,7 +566,7 @@ module Sapphire
         node.ng_body && 
         !node.ng_body.is_a?(Sapphire::Node::ScopedBase) &&
         !node.ng_body.is_a?(Sapphire::Node::AsgnBase) 
-        src << "#{obj_to_perl node.condition} ? #{obj_to_perl node.ok_body} : #{
+        src << "(#{obj_to_perl node.condition}) ? #{obj_to_perl node.ok_body} : #{
           obj_to_perl node.ng_body}#{semicolon_if_needed node}"
 =begin
       # if/unless modifier

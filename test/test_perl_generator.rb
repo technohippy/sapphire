@@ -250,7 +250,7 @@ class TestPerlGenerator < Test::Unit::TestCase
 
   def test_generate_if
     assert_code <<-EXPECTED.strip, <<-ACTUAL
-      bool() ? do_something() : do_other();
+      (bool()) ? do_something() : do_other();
     EXPECTED
       if bool
         do_something
@@ -295,7 +295,7 @@ class TestPerlGenerator < Test::Unit::TestCase
     ACTUAL
 
     assert_code <<-EXPECTED.strip, <<-ACTUAL
-      bool() ? do_something() : do_other();
+      (bool()) ? do_something() : do_other();
     EXPECTED
       bool ? do_something : do_other
     ACTUAL
