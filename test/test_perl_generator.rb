@@ -1135,4 +1135,26 @@ class TestPerlGenerator < Test::Unit::TestCase
       end
     ACTUAL
   end
+
+  def test_bug
+    # class method calling after __self__
+    assert_code <<-EXPECTED, <<-ACTUAL
+      {
+        package Foo;
+        __PACKAGE__->bar(sub {
+            my $self = shift;
+            do_something();
+          }
+        );
+        __PACKAGE__->buzz();
+      }
+    EXPECTED
+      class Foo
+        self.bar ->(__self__) {
+          do_something
+        }
+        self.buzz
+      end
+    ACTUAL
+  end
 end

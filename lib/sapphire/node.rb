@@ -30,6 +30,7 @@ module Sapphire
           def body
             body = BlockNode.new(*@arguments[#{range.inspect}])
             body.parent = self
+            body.setup self.scope
             body
           end
         EOS

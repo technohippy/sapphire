@@ -24,7 +24,7 @@ module Sapphire
     end
 
     def create_child
-      self.class.new self
+      Scope.new self
     end
 
     def define_constant(constant_name, type=:ref)

@@ -776,7 +776,7 @@ module Sapphire
     def block_to_perl(block, args)
       asgn_args = if args && args != 0
           args[0] = :self if args.first == :__self__ # TODO
-          block.parent.scope.define_variable 'self', :ref # TODO
+          block.scope.define_variable 'self', :ref # TODO
           args.arguments.map do |arg|
             "my $#{arg} = shift;"
           end.join "\n"
